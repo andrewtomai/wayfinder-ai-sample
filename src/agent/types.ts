@@ -1,0 +1,104 @@
+// ============================================================================
+// Agent Types
+// ============================================================================
+/**
+ * A tool that the agent can execute.
+ *
+ * Each tool has a name, description, JSON schema for input validation,
+ * and an action function that performs the tool's operation.
+ */
+export interface AgentTool {
+  name: string;
+  description: string;
+  parametersJsonSchema: object;
+  responseJsonSchema?: object;
+  action: (args: Record<string, unknown>) => Promise<unknown>;
+}
+
+/**
+ * A message returned by the agent after processing a user query.
+ *
+ * Contains the AI's response text and metadata about tool calls/results made during execution.
+ */
+export interface AgentMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: Date;
+  toolCalls?: ToolCall[];
+  toolResults?: ToolResult[];
+}
+
+/**
+ * The result of running the agent on a user message.
+ *
+ * Contains the final message, and arrays of all tool calls and results that occurred
+ * during the execution loop.
+ */
+export interface AgentRunResult {
+  message: AgentMessage;
+  toolCalls: ToolCall[];
+  toolResults: ToolResult[];
+}
+
+/**
+ * Represents a single message in the conversation.
+ *
+ * @interface Message
+ * @property {string} role - The sender of the message: "user" for user queries or "assistant" for AI responses
+ * @property {string} content - The text content of the message
+ */
+export interface Message {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/**
+ * Represents a tool call requested by the AI.
+ *
+ * When an AI decides it needs to use a tool to answer a query, it returns a ToolCall
+ * with the tool name and arguments. The agent then executes the tool and passes results back.
+ *
+ * @interface ToolCall
+ * @property {string} name - The name of the tool to invoke (e.g., "search_locations")
+ * @property {Record<string, unknown>} args - The arguments to pass to the tool as key-value pairs
+ */
+export interface ToolCall {
+  name: string;
+  args: Record<string, unknown>;
+}
+
+/**
+ * Represents the result of executing a tool.
+ *
+ * After a ToolCall is executed, the result is wrapped in a ToolResult and sent back
+ * to the AI so it can incorporate the real data into its response.
+ *
+ * @interface ToolResult
+ * @property {string} name - The name of the tool that was executed
+ * @property {unknown} result - The data returned by the tool execution
+ * @property {string} [error] - Optional error message if the tool execution failed
+ */
+export interface ToolResult {
+  name: string;
+  result: unknown;
+  error?: string;
+}
+
+/**
+ * Represents the response from the AI after processing a request.
+ *
+ * The AI may respond with:
+ * - `text` only: A final answer to the user's query
+ * - `toolCalls` only: Requests to execute tools (agent will execute and call generate again)
+ * - Both: The AI may provide context along with tool requests
+ * - Neither: Should not happen; indicates an error or unexpected state
+ *
+ * @interface GenerateResponse
+ * @property {string | null} text - The AI's text response, or null if only tool calls are being made
+ * @property {ToolCall[] | null} toolCalls - An array of tool calls the AI wants to make, or null if providing a final response
+ */
+export interface GenerateResponse {
+  text: string | null;
+  toolCalls: ToolCall[] | null;
+}

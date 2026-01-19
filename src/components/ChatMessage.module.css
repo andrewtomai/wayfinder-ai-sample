@@ -1,0 +1,214 @@
+/* ChatMessage Component Styles */
+.chat-message {
+  display: flex;
+  flex-direction: column;
+  max-width: 95%;
+  animation: messageSlideIn 200ms ease-out;
+  word-break: break-word;
+}
+
+@media (max-width: 400px) {
+  .chat-message {
+    max-width: 100%;
+  }
+}
+
+@keyframes messageSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chat-message.user {
+  align-self: flex-end;
+}
+
+.chat-message.assistant {
+  align-self: flex-start;
+}
+
+.chat-message-content {
+  padding: 10px 14px;
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+  line-height: 1.5;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Markdown content styling */
+.chat-message-content p {
+  margin: 0 0 8px 0;
+}
+
+.chat-message-content p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-message-content h1,
+.chat-message-content h2,
+.chat-message-content h3,
+.chat-message-content h4,
+.chat-message-content h5,
+.chat-message-content h6 {
+  margin: 8px 0 4px 0;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.chat-message-content h1 {
+  font-size: 16px;
+}
+
+.chat-message-content h2 {
+  font-size: 15px;
+}
+
+.chat-message-content h3 {
+  font-size: 14px;
+}
+
+.chat-message-content h4,
+.chat-message-content h5,
+.chat-message-content h6 {
+  font-size: 13px;
+}
+
+.chat-message-content ul,
+.chat-message-content ol {
+  margin: 6px 0;
+  padding-left: 20px;
+}
+
+.chat-message-content li {
+  margin: 2px 0;
+}
+
+.chat-message-content code {
+  background-color: rgba(0, 0, 0, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: "Monaco", "Courier New", monospace;
+  font-size: 12px;
+}
+
+.chat-message.assistant .chat-message-content code {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.chat-message.user .chat-message-content code {
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.chat-message-content pre {
+  background-color: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 8px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+
+.chat-message-content pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.chat-message-content blockquote {
+  border-left: 3px solid rgba(0, 0, 0, 0.2);
+  margin: 6px 0;
+  padding-left: 10px;
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.chat-message-content a {
+  text-decoration: underline;
+}
+
+.chat-message.user .chat-message-content a {
+  color: inherit;
+}
+
+.chat-message.assistant .chat-message-content a {
+  color: inherit;
+}
+
+@media (max-width: 400px) {
+  .chat-message-content {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}
+
+.chat-message.user .chat-message-content {
+  background-color: var(--primary-color);
+  color: white;
+  border-bottom-right-radius: var(--radius-sm);
+}
+
+.chat-message.assistant .chat-message-content {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-bottom-left-radius: var(--radius-sm);
+}
+
+.chat-message-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+.chat-message.user .chat-message-time {
+  text-align: right;
+}
+
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 14px;
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  border-bottom-left-radius: var(--radius-sm);
+  align-self: flex-start;
+}
+
+.typing-indicator span {
+  width: 6px;
+  height: 6px;
+  background-color: var(--text-muted);
+  border-radius: 50%;
+  animation: typingBounce 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: 0ms;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: 200ms;
+}
+
+.typing-indicator span:nth-child(3) {
+  animation-delay: 400ms;
+}
+
+@keyframes typingBounce {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-4px);
+  }
+}

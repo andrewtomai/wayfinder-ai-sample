@@ -1,0 +1,96 @@
+import AtriusMaps from "locusmaps-sdk";
+import type { MapInstance } from "locusmaps-sdk";
+import type { Static } from "typebox";
+import { Value } from "typebox/value";
+import { Config } from "./types/config.js";
+import { Directions, MultipointDirections } from "./types/directions.js";
+import { POI } from "./types/poi.js";
+import { BuildingsAndLevels } from "./types/venue.js";
+import { SearchEngine, SearchResult } from "./search/SearchEngine.js";
+import type { SearchOptions } from "./search/SearchEngine.js";
+
+class AtriusMap {
+  private readonly map;
+  private readonly searchEngine: SearchEngine;
+  private static instance: AtriusMap | null = null;
+  private static initPromise: Promise<AtriusMap> | null = null;
+
+  private constructor(map: MapInstance, searchEngine: SearchEngine) {
+    this.map = map;
+    this.searchEngine = searchEngine;
+  }
+
+  public static async getInstance(
+    selector: string,
+    config: Static<typeof Config>,
+  ): Promise<AtriusMap> {
+    // If instance already exists, return it
+    if (this.instance) {
+      return this.instance;
+    }
+
+    // If initialization is in progress, wait for it to complete
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    // Start initialization
+    this.initPromise = this.createInstance(selector, config);
+    this.instance = await this.initPromise;
+    return this.instance;
+  }
+
+  private static async createInstance(
+    selector: string,
+    config: Static<typeof Config>,
+  ): Promise<AtriusMap> {
+    const map = await AtriusMaps.newMap(selector, Value.Parse(Config, config));
+    const searchEngine = new SearchEngine(
+      Object.values(await map.getAllPOIs()),
+    );
+    return new AtriusMap(map, searchEngine);
+  }
+
+  async getPOIDetails(poiId: number) {
+    const result = await this.map.getPOIDetails(poiId);
+    return Value.Parse(POI, result);
+  }
+
+  async showPOI(poiId: number) {
+    const data = await this.map.getPOIDetails(poiId);
+    await this.map.showPOI(poiId);
+    return Value.Parse(POI, data);
+  }
+
+  async showDirections(waypoints: number[]) {
+    const args = waypoints.map((poiId) => ({ poiId }));
+    const result = await this.map.getDirectionsMultiple(args);
+    await this.map.showNavigationMultiple(args);
+    return Value.Parse(MultipointDirections, result);
+  }
+
+  async getStructures() {
+    const result = await this.map.getStructures();
+    const cleaned = Value.Clean(BuildingsAndLevels, result);
+    return Value.Parse(BuildingsAndLevels, cleaned);
+  }
+
+  async search(options: Static<typeof SearchOptions>) {
+    return this.searchEngine.search(options);
+  }
+
+  async getCategories() {
+    return this.searchEngine.getCategories();
+  }
+}
+
+// Export a function that returns the singleton instance
+const getMapInstance = () =>
+  AtriusMap.getInstance("#map", {
+    venueId: import.meta.env.VITE_ATRIUS_VENUE_ID,
+    accountId: import.meta.env.VITE_ATRIUS_ACCOUNT_ID,
+  });
+
+export default getMapInstance;
+
+export { AtriusMap, SearchResult, Directions, MultipointDirections };
