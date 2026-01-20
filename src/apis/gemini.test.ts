@@ -8,7 +8,7 @@
 
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 import { GeminiClient, GeminiError } from "./gemini";
-import type { AgentTool, Message, ToolCall, ToolResult } from "../agent/types";
+import type { AgentTool, Message } from "../agent/types";
 import { Type } from "typebox";
 
 // Mock the logger to avoid console noise during tests
@@ -706,8 +706,8 @@ describe("GeminiClient", () => {
     });
   });
 
-  describe("Pending Tool Calls and Results", () => {
-    it("should include pending tool calls in contents", async () => {
+  describe("Tool Calls and Results in Message History", () => {
+    it("should include tool calls from message history in contents", async () => {
       const mockResponse = {
         candidates: [
           {
@@ -721,32 +721,25 @@ describe("GeminiClient", () => {
         json: async () => mockResponse,
       } as Response);
 
-      const pendingToolCalls: ToolCall[] = [
-        { name: "search", args: { query: "bathroom" } },
-      ];
-
-      const pendingToolResults: ToolResult[] = [
+      const messages: Message[] = [
+        { role: "user", content: "Find bathrooms" },
         {
-          name: "search",
-          result: [{ id: 1, name: "Restroom" }],
+          role: "assistant",
+          content: JSON.stringify({
+            toolCalls: [{ name: "search", args: { query: "bathroom" } }],
+          }),
         },
       ];
 
-      await client.generate(
-        [],
-        [],
-        "",
-        pendingToolCalls,
-        pendingToolResults
-      );
+      await client.generate(messages, [], "");
 
       const callArgs = fetchMock.mock.calls[0][1];
       const body = JSON.parse((callArgs as RequestInit).body as string);
 
-      // Should have model + user content for tool call/result pair
+      // Should have the user message + assistant message with tool call
       expect(body.contents.length).toBeGreaterThanOrEqual(2);
 
-      // Find the tool call and result
+      // Find the tool call
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const hasToolCall = body.contents.some((c: any) =>
         c.parts.some(
@@ -754,6 +747,51 @@ describe("GeminiClient", () => {
           (p: any) => p.functionCall?.name === "search"
         )
       );
+
+      expect(hasToolCall).toBe(true);
+    });
+
+    it("should include tool results from message history in contents", async () => {
+      const mockResponse = {
+        candidates: [
+          {
+            content: { role: "model", parts: [{ text: "ok" }] },
+          },
+        ],
+      };
+
+      fetchMock.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockResponse,
+      } as Response);
+
+      const messages: Message[] = [
+        { role: "user", content: "Find bathrooms" },
+        {
+          role: "assistant",
+          content: JSON.stringify({
+            toolCalls: [{ name: "search", args: { query: "bathroom" } }],
+          }),
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            toolResults: [
+              {
+                name: "search",
+                result: [{ id: 1, name: "Restroom" }],
+              },
+            ],
+          }),
+        },
+      ];
+
+      await client.generate(messages, [], "");
+
+      const callArgs = fetchMock.mock.calls[0][1];
+      const body = JSON.parse((callArgs as RequestInit).body as string);
+
+      // Find the tool result
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const hasToolResult = body.contents.some((c: any) =>
         c.parts.some(
@@ -762,11 +800,10 @@ describe("GeminiClient", () => {
         )
       );
 
-      expect(hasToolCall).toBe(true);
       expect(hasToolResult).toBe(true);
     });
 
-    it("should not include pending data when both are undefined", async () => {
+    it("should handle empty message history", async () => {
       const mockResponse = {
         candidates: [
           {
@@ -780,7 +817,7 @@ describe("GeminiClient", () => {
         json: async () => mockResponse,
       } as Response);
 
-      await client.generate([], [], "", undefined, undefined);
+      await client.generate([], [], "");
 
       const callArgs = fetchMock.mock.calls[0][1];
       const body = JSON.parse((callArgs as RequestInit).body as string);

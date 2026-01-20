@@ -9,7 +9,6 @@ import type {
   AgentTool,
   Message,
   ToolCall,
-  ToolResult,
   GenerateResponse,
 } from "../agent/types";
 import type { IAIClient } from "../agent/IAIClient";
@@ -94,14 +93,8 @@ export class GeminiClient implements IAIClient {
     messages: Message[],
     tools: AgentTool[],
     systemInstruction: string,
-    pendingToolCalls?: ToolCall[],
-    pendingToolResults?: ToolResult[],
   ): Promise<GenerateResponse> {
-    const contents = this.buildContents(
-      messages,
-      pendingToolCalls,
-      pendingToolResults,
-    );
+    const contents = this.buildContents(messages);
     const functionDeclarations = this.toFunctionDeclarations(tools);
 
     const request: GeminiGenerateRequest = {
@@ -172,14 +165,14 @@ export class GeminiClient implements IAIClient {
   }
 
   /**
-   * Build Gemini contents from messages and pending tool interactions
+   * Build Gemini contents from messages
+   *
+   * Converts the agent's message history (including tool calls and results)
+   * to Gemini's content format. Tool calls and results are already persisted
+   * in the messages array as JSON strings.
    */
-  private buildContents(
-    messages: Message[],
-    pendingToolCalls?: ToolCall[],
-    pendingToolResults?: ToolResult[],
-  ): GeminiContent[] {
-    const contents: GeminiContent[] = messages.map((msg) => {
+  private buildContents(messages: Message[]): GeminiContent[] {
+    return messages.map((msg) => {
       const role = msg.role === "user" ? "user" : "model";
 
       // Only parse JSON if it looks like a tool message (starts with { and contains toolCalls/toolResults)
@@ -190,7 +183,7 @@ export class GeminiClient implements IAIClient {
           // Handle tool calls persisted in history
           if (parsed.toolCalls && Array.isArray(parsed.toolCalls)) {
             const parts: GeminiPart[] = parsed.toolCalls.map(
-              (tc: ToolCall) => ({
+              (tc: { name: string; args: Record<string, unknown> }) => ({
                 functionCall: { name: tc.name, args: tc.args },
               }),
             );
@@ -200,7 +193,7 @@ export class GeminiClient implements IAIClient {
           // Handle tool results persisted in history
           if (parsed.toolResults && Array.isArray(parsed.toolResults)) {
             const parts: GeminiPart[] = parsed.toolResults.map(
-              (tr: ToolResult) => ({
+              (tr: { name: string; result?: unknown; error?: string }) => ({
                 functionResponse: {
                   name: tr.name,
                   response: {
@@ -223,37 +216,6 @@ export class GeminiClient implements IAIClient {
       // Treat as plain text message (regular user/assistant messages)
       return { role, parts: [{ text: msg.content }] };
     });
-
-    // Add pending tool calls and results if present
-    if (pendingToolCalls && pendingToolResults) {
-      for (let i = 0; i < pendingToolCalls.length; i++) {
-        const tc = pendingToolCalls[i];
-        const tr = pendingToolResults[i];
-
-        // Model's function call
-        contents.push({
-          role: "model",
-          parts: [{ functionCall: { name: tc.name, args: tc.args } }],
-        });
-
-        // Function response
-        contents.push({
-          role: "user",
-          parts: [
-            {
-              functionResponse: {
-                name: tr.name,
-                response: {
-                  result: tr.error ? { error: tr.error } : tr.result,
-                },
-              },
-            },
-          ],
-        });
-      }
-    }
-
-    return contents;
   }
 
   /**

@@ -12,8 +12,6 @@ import type {
   AgentTool,
   GenerateResponse,
   Message,
-  ToolCall,
-  ToolResult,
 } from "../agent/types";
 
 /**
@@ -34,13 +32,16 @@ export interface IAIClient {
    * This method runs a single step of the AI reasoning loop. The agent may call
    * this multiple times if the AI requests tool execution.
    *
-   * @param {Message[]} messages - The full conversation history up to this point
+   * The messages array contains the complete conversation history including:
+   * - User queries
+   * - Assistant responses (text)
+   * - Tool calls (serialized as JSON in assistant messages)
+   * - Tool results (serialized as JSON in user messages)
+   *
+   * @param {Message[]} messages - The complete conversation history up to this point,
+   *                               including all tool calls and results from previous iterations
    * @param {AgentTool[]} tools - The set of tools available for the AI to use
    * @param {string} systemInstruction - The system prompt that guides AI behavior
-   * @param {ToolCall[]} [pendingToolCalls] - Optional array of tool calls from a previous response
-   *                                           that the AI is providing results for
-   * @param {ToolResult[]} [pendingToolResults] - Optional array of results from executing tools
-   *                                              that should be sent back to the AI
    *
    * @returns {Promise<GenerateResponse>} The AI's response, which may include text and/or tool calls
    *
@@ -54,13 +55,16 @@ export interface IAIClient {
    * // response.toolCalls might be [{ name: "search_locations", args: { query: "bathroom" } }]
    *
    * @example
-   * // Send tool results back to AI
+   * // Multi-iteration conversation
+   * // After tool execution, tool calls and results are added to messages
    * const followUp = await client.generate(
-   *   [...messages, toolResultMessage],
+   *   [
+   *     { role: "user", content: "Where is the bathroom?" },
+   *     { role: "assistant", content: JSON.stringify({ toolCalls: [...] }) },
+   *     { role: "user", content: JSON.stringify({ toolResults: [...] }) },
+   *   ],
    *   [searchTool],
-   *   "You are a helpful venue assistant",
-   *   response.toolCalls,
-   *   [{ name: "search_locations", result: [...locations] }]
+   *   "You are a helpful venue assistant"
    * );
    * // followUp.text might be "The nearest bathroom is on the second floor"
    */
@@ -68,7 +72,5 @@ export interface IAIClient {
     messages: Message[],
     tools: AgentTool[],
     systemInstruction: string,
-    pendingToolCalls?: ToolCall[],
-    pendingToolResults?: ToolResult[],
   ): Promise<GenerateResponse>;
 }

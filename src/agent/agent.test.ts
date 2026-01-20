@@ -9,7 +9,7 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { Agent } from "./Agent";
-import type { AgentTool, Message, ToolCall, ToolResult } from "./types";
+import type { AgentTool, Message, ToolCall } from "./types";
 
 // Mock the logger to avoid noise during tests
 vi.mock("../utils/logger", () => ({
@@ -25,8 +25,6 @@ vi.mock("../utils/logger", () => ({
 let mockResponseFn:
   | ((context: {
       messages: Message[];
-      pendingToolCalls?: ToolCall[];
-      pendingToolResults?: ToolResult[];
     }) => { text?: string | null; toolCalls?: ToolCall[] | null })
   | null = null;
 
@@ -36,16 +34,14 @@ vi.mock("../apis/gemini", () => {
     GeminiClient: class {
       async generate(
         messages: Message[],
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         _tools: AgentTool[],
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         _systemInstruction: string,
-        pendingToolCalls?: ToolCall[],
-        pendingToolResults?: ToolResult[],
       ) {
         if (mockResponseFn) {
           return mockResponseFn({
             messages,
-            pendingToolCalls,
-            pendingToolResults,
           });
         }
         return { text: "" };
@@ -108,8 +104,6 @@ describe("Agent Context Preservation", () => {
     let callCount = 0;
     mockResponseFn = (context: {
       messages: Message[];
-      pendingToolCalls?: ToolCall[];
-      pendingToolResults?: ToolResult[];
     }) => {
       callCount++;
 

@@ -173,10 +173,6 @@ Let me try again with that extra info—I'm usually pretty good at finding thing
     let finalText = "";
     let iterations = 0;
 
-    // Pending tool calls/results for the current iteration
-    let pendingToolCalls: ToolCall[] = [];
-    let pendingToolResults: ToolResult[] = [];
-
     // Agent loop - continue until we get a text response or hit max iterations
     while (iterations < MAX_ITERATIONS) {
       iterations++;
@@ -189,13 +185,11 @@ Let me try again with that extra info—I'm usually pretty good at finding thing
       const toolsForThisIteration =
         iterations === MAX_ITERATIONS ? [] : this.tools;
 
-      // Call AI client
+      // Call AI client with current message history (which includes all tool calls/results from previous iterations)
       const response = await this.client.generate(
         this.messages,
         toolsForThisIteration,
         systemInstruction,
-        pendingToolCalls.length > 0 ? pendingToolCalls : undefined,
-        pendingToolResults.length > 0 ? pendingToolResults : undefined,
       );
 
       if (response.toolCalls && response.toolCalls.length > 0) {
@@ -203,33 +197,29 @@ Let me try again with that extra info—I'm usually pretty good at finding thing
           `AI called ${response.toolCalls.length} tool(s): ${response.toolCalls.map((t) => t.name).join(", ")}`,
         );
 
-        // Clear pending for next iteration
-        pendingToolCalls = [];
-        pendingToolResults = [];
+        // Collect results for this iteration
+        const toolResults: ToolResult[] = [];
 
-        // Process each tool call
+        // Execute each tool call
         for (const tc of response.toolCalls) {
           allToolCalls.push(tc);
 
           // Execute the tool
           const toolResult = await this.executeTool(tc.name, tc.args);
           allToolResults.push(toolResult);
-
-          // Track for next API call (maintain 1:1 pairing)
-          pendingToolCalls.push(tc);
-          pendingToolResults.push(toolResult);
+          toolResults.push(toolResult);
         }
 
-        // Persist tool calls and results to message history
-        // This ensures the next iteration's AI call includes this iteration's context
+        // Add tool calls to message history
         this.messages.push({
           role: "assistant",
-          content: JSON.stringify({ toolCalls: pendingToolCalls }),
+          content: JSON.stringify({ toolCalls: response.toolCalls }),
         });
 
+        // Add tool results to message history
         this.messages.push({
           role: "user",
-          content: JSON.stringify({ toolResults: pendingToolResults }),
+          content: JSON.stringify({ toolResults }),
         });
 
         logger.debug(
