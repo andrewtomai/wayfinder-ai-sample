@@ -1,8 +1,8 @@
 # Understanding AI Agent Orchestration
 
-A learning document explaining how our AI agent works, how it communicates with LLMs, and why the design is so flexible.
+A guide to the patterns and design principles behind AI agent systems that orchestrate LLM thinking with tool execution.
 
-**Intended for**: Team developers wanting to understand the agent architecture and extend it with new tools or providers.
+**Intended for**: Developers wanting to understand how agent loops work, what makes them powerful, and how to build or extend agentic systems.
 
 ---
 
@@ -18,15 +18,15 @@ An AI agent isn't just a simple "question → answer" system. It's a **loop**—
 4. **React**: Send results back to the LLM for further analysis
 5. **Loop**: Repeat until the LLM provides a final answer
 
-Imagine an airport information desk attendant who has walkie-talkies to different departments:
+Imagine a research assistant who has access to a database, search engine, and calculator:
 
-- User asks: "Where's the nearest bathroom near Gate 15?"
-- Attendant **thinks**: "I need to search for bathrooms near that gate"
-- Attendant **acts**: Radios the map system asking for bathroom POIs near Gate 15
-- Attendant **observes**: Gets back 3 bathrooms with distances
-- Attendant **reacts**: "The closest is 50 meters away in Terminal A"
+- User asks: "What's the average height of Scandinavian men?"
+- Assistant **thinks**: "I need to search for this data"
+- Assistant **acts**: Searches the database for height statistics
+- Assistant **observes**: Gets back raw data including various measurements
+- Assistant **reacts**: "Based on data from X, the average is Y"
 
-That's an agent loop. The attendant is the LLM, the radio calls are tool executions, and the loop is what makes multi-step reasoning possible.
+That's an agent loop. The assistant is the LLM, the database lookups are tool executions, and the loop is what makes multi-step reasoning possible.
 
 ### Three Key Concepts
 
@@ -118,214 +118,81 @@ If loop reaches 10 iterations without text response:
     └─ Return that message
 ```
 
-#### Step-by-Step with Code
+#### Step-by-Step Logic
 
-Let's look at the actual code in `src/agent/Agent.ts` and walk through each step:
+Let's walk through the key steps of the agent loop:
 
 **Step 1: User sends message**
 
-```typescript
-// src/agent/Agent.ts:162
-this.messages.push({
-  role: "user",
-  type: "user_input",
-  content: userMessage,
-});
-```
-
-The message is added to the conversation history. This history is your state machine—everything persists here.
+The user's message is added to the conversation history. This history becomes your state machine—everything that happens is recorded here and persists across iterations.
 
 **Step 2: Enter the loop**
 
-```typescript
-// src/agent/Agent.ts:170
-while (this.iteration < MAX_ITERATIONS) {
-  this.iteration++;
-  // ... decision logic
-}
-```
-
-We loop up to 10 times. On iteration 10, tools are removed from the request, forcing the LLM to provide a text answer.
+Start looping (typically 1-10 iterations). On the final iteration, tools will be withheld from the request to force the LLM to provide a text answer.
 
 **Step 3: Send to LLM**
 
-```typescript
-// src/agent/Agent.ts:182-186
-const response = await this.client.generate(
-  this.messages, // Full conversation history
-  toolsForThisIteration, // Tools (empty on iteration 10)
-  systemInstruction, // Role + guidelines + iteration count
-);
-```
+Call the LLM with three things:
 
-We send three things:
-
-- `this.messages`: Everything that's happened so far
-- `toolsForThisIteration`: The functions the LLM can call
-- `systemInstruction`: How to behave (changes based on iteration count)
+- **Message history**: Everything that's happened so far
+- **Available tools**: The functions the LLM can invoke
+- **System instruction**: Guidelines for behavior (changes based on iteration count)
 
 **Step 4a: Handle tool calls**
 
-```typescript
-// src/agent/Agent.ts:188-224
-if (response.toolCalls) {
-  // Execute each tool
-  const toolResults = await Promise.all(
-    response.toolCalls.map((call) => this.executeTool(call.name, call.args)),
-  );
+When the LLM responds with tool calls:
 
-  // Add to history: what the assistant wanted to do
-  this.messages.push({
-    role: "assistant",
-    type: "tool_calls",
-    content: response.toolCalls,
-  });
-
-  // Add to history: what happened when we did it
-  this.messages.push({
-    role: "user",
-    type: "tool_results",
-    content: toolResults,
-  });
-
-  // Loop continues, LLM sees the results and decides next step
-}
-```
-
-When the LLM calls tools:
-
-1. We execute them (in parallel with `Promise.all`)
+1. Execute each tool in parallel
 2. Record what the LLM wanted to do
-3. Record what actually happened
+3. Record what actually happened (results or errors)
 4. Loop back to the LLM with the results
 
-The LLM might then call more tools, or provide a final answer.
+The LLM reads the results and decides whether to call more tools or provide a final answer.
 
 **Step 4b: Handle text response**
 
-```typescript
-// src/agent/Agent.ts:225-239
-if (response.text) {
-  finalText = response.text;
-  this.messages.push({
-    role: "assistant",
-    type: "assistant_response",
-    content: finalText,
-  });
-  break;
-}
-```
+When the LLM provides a text answer:
 
-When the LLM provides a text answer, we add it to history and exit the loop.
+1. Add it to history
+2. Exit the loop
+3. Return the result to the user
 
 **Step 5: Handle exhaustion**
 
-```typescript
-// src/agent/Agent.ts:243-252
-if (this.iteration >= MAX_ITERATIONS) {
-  if (!finalText) {
-    finalText = "I've reached my iteration limit without a clear answer...";
-    // Generate a conversational fallback
-  }
-}
-```
+If you hit the maximum iterations without a text response, generate a graceful fallback message asking the user for clarification.
 
-If we hit 10 iterations without a text response, we generate a friendly message and exit gracefully.
-
-### Message History: The Persistent State
+### Message History: The Persistent State Machine
 
 The key insight: **everything that happens is recorded in the message history**. This is your state machine.
 
-```typescript
-// src/agent/types.ts:73-93
-type Message =
-  | { role: "user"; type: "user_input"; content: string }
-  | { role: "assistant"; type: "assistant_response"; content: string }
-  | { role: "assistant"; type: "tool_calls"; content: ToolCall[] }
-  | { role: "user"; type: "tool_results"; content: ToolResult[] };
-```
+A message can be one of four types:
 
-Each message is a discriminated union—the `type` field tells you exactly what kind of message it is:
+- **User input**: The user asked something
+- **Assistant response**: The LLM provided a final answer
+- **Tool calls**: The LLM decided to invoke one or more tools
+- **Tool results**: You executed those tools and got results
 
-- `user_input`: User asked something
-- `assistant_response`: LLM gave a final answer
-- `tool_calls`: LLM decided to call tools
-- `tool_results`: We executed those tools and got results
+Each message is atomic and represents one logical action in the conversation.
 
 #### Example: Full Conversation History
 
-Here's what the history might look like for "Where's the nearest bathroom near Gate 15?":
+Here's a typical conversation flow:
 
-```typescript
-[
-  // 1. User asks
-  {
-    role: "user",
-    type: "user_input",
-    content: "Where's the nearest bathroom near Gate 15?"
-  },
-
-  // 2. LLM decides to search
-  {
-    role: "assistant",
-    type: "tool_calls",
-    content: [
-      {
-        name: "search",
-        args: { term: "bathroom", near: { poiId: 456 } }
-      }
-    ]
-  },
-
-  // 3. Search results come back
-  {
-    role: "user",
-    type: "tool_results",
-    content: [
-      {
-        name: "search",
-        result: [
-          { poiId: 789, name: "Restroom A", distance: 50 },
-          { poiId: 790, name: "Restroom B", distance: 120 }
-        ]
-      }
-    ]
-  },
-
-  // 4. LLM decides to show the closest one on map
-  {
-    role: "assistant",
-    type: "tool_calls",
-    content: [
-      {
-        name: "showPOI",
-        args: { poiId: 789 }
-      }
-    ]
-  },
-
-  // 5. Map updated
-  {
-    role: "user",
-    type: "tool_results",
-    content: [
-      {
-        name: "showPOI",
-        result: { poiId: 789, name: "Restroom A", ... }
-      }
-    ]
-  },
-
-  // 6. LLM provides final answer
-  {
-    role: "assistant",
-    type: "assistant_response",
-    content: "The nearest bathroom is Restroom A, just 50 meters away..."
-  }
-]
+```
+1. User: "What's the average height of Scandinavian men?"
+   ↓
+2. LLM decides to search: "I'll search for Scandinavian population data"
+   ↓
+3. Tool result: Gets back raw statistics
+   ↓
+4. LLM decides to calculate: "I'll average the heights from that data"
+   ↓
+5. Tool result: Calculator returns 180cm
+   ↓
+6. LLM provides answer: "Based on the data, the average is 180cm"
 ```
 
-Notice: the entire loop is recorded. The next time you send a message, all of this history goes back to the LLM. It has full context.
+Notice: the entire loop is recorded. The next user message comes in, and all of this history goes back to the LLM. It has full context for the next iteration.
 
 ### Iteration Management and Dynamic Prompting
 
@@ -333,11 +200,11 @@ The system uses iterations to guide behavior and prevent infinite loops. The sys
 
 #### Iterations 1-7: Full Capabilities
 
-On early iterations, the LLM has full access to tools and the system instruction is standard.
+On early iterations, the LLM has full access to tools and standard system instructions apply.
 
 #### Iterations 8-9: Wrap-Up Mode
 
-On iterations 8-9, the system instruction includes a warning:
+As you approach the iteration limit, the system instruction includes guidance:
 
 ```
 Note: You have 2 iterations remaining. Prioritize providing an answer.
@@ -345,19 +212,11 @@ If you need more information, ask the user directly rather than
 running more searches. Think about what you already know.
 ```
 
-This guides the LLM to wrap up instead of continuing to search.
+This steers the LLM toward wrapping up instead of continuing to explore.
 
-#### Iteration 10: No Tools (Force Answer)
+#### Iteration 10 (Final): No Tools (Force Answer)
 
-On iteration 10, tools are removed from the request:
-
-```typescript
-// src/agent/Agent.ts:178-180
-const toolsForThisIteration =
-  this.iteration === MAX_ITERATIONS ? [] : this.tools;
-```
-
-The system instruction becomes:
+On the final iteration, tools are removed from the request entirely. The system instruction becomes:
 
 ```
 You have no iterations left. You must provide a final answer based
@@ -367,58 +226,37 @@ you would need.
 
 With no tools available, the LLM must respond with text. This prevents infinite loops.
 
-#### System Instruction Building
+#### Why Dynamic Prompting Matters
 
-```typescript
-// src/agent/prompts.ts:90-108
-function buildSystemInstruction(iteration: number): string {
-  let instruction = baseInstruction;
-
-  if (iteration >= MAX_ITERATIONS) {
-    instruction += "\n\nYou have no iterations left...";
-  } else if (iteration + 2 >= MAX_ITERATIONS) {
-    instruction += `\n\nNote: You have ${MAX_ITERATIONS - iteration} iterations remaining...`;
-  }
-
-  return instruction;
-}
-```
-
-This dynamic adjustment is key to good agent behavior: the LLM gets increasingly pressure to wrap up, then is forced to.
+The key is that **system instructions change based on state**. The LLM gets increasingly pressured to wrap up, then is forced to. This is more elegant than arbitrary cutoffs—it guides the LLM toward the right behavior before forcing it.
 
 ### What Gets Sent to the LLM: The API Request
 
-Let's look at exactly what you're sending to the LLM each time you call `generate()`.
+Every time you call the LLM, you send the same three things: conversation history, available tools, and system instructions. The format varies by provider, but the structure is universal.
 
-#### Provider-Agnostic Structure
-
-Though we'll show Gemini as an example, this structure generalizes to any LLM (Claude, OpenAI, etc.):
+#### Universal Structure
 
 ```
 POST /api/generate
 {
-  "contents": [               ← Full conversation history
+  "messages": [             ← Full conversation history
     {
-      "role": "user",         ← Role of who sent this message
-      "parts": [              ← One or more parts (text, tool calls, results)
-        { "text": "..." },
-        { "functionCall": {...} },
-        { "functionResponse": {...} }
-      ]
+      "role": "user",       ← Who sent this (user or assistant)
+      "content": "..."
     }
   ],
-  "tools": [                  ← Available functions LLM can call
+  "tools": [                ← Available functions LLM can call
     {
       "name": "search",
-      "description": "Search for POIs...",
+      "description": "Search for information...",
       "parameters": {
         "type": "object",
         "properties": {...}
       }
     }
   ],
-  "systemInstruction": "You are an airport assistant...",  ← Role + guidelines
-  "generationConfig": {
+  "systemInstruction": "You are an assistant...",  ← Role + guidelines
+  "config": {
     "temperature": 0.7
   }
 }
@@ -426,396 +264,245 @@ POST /api/generate
 
 #### Breaking Down Each Section
 
-**1. Contents (Conversation History)**
+**1. Messages (Conversation History)**
 
-Your full message history formatted for the LLM:
+Your full message history formatted for the LLM. This is the critical part—it includes:
 
-```typescript
-// src/apis/gemini.ts:173-205
-contents: this.messages.map((msg) => {
-  if (msg.type === "user_input") {
-    return {
-      role: "user",
-      parts: [{ text: msg.content }],
-    };
-  }
-  if (msg.type === "tool_calls") {
-    return {
-      role: "model", // In Gemini, "model" = "assistant"
-      parts: msg.content.map((call) => ({
-        functionCall: {
-          name: call.name,
-          args: call.args,
-        },
-      })),
-    };
-  }
-  if (msg.type === "tool_results") {
-    return {
-      role: "user",
-      parts: msg.content.map((result) => ({
-        functionResponse: {
-          name: result.name,
-          response: { result: result.result },
-        },
-      })),
-    };
-  }
-  // ... etc
-});
-```
+- User input
+- Previous tool calls (what the LLM wanted to do)
+- Tool results (what actually happened)
+- Previous responses (what the LLM already said)
 
-Each message from your history is transformed into the LLM's format.
+The LLM reads this entire history and reasons about the next step.
 
 **2. Tools (Function Declarations)**
 
-The tools you defined, formatted as schema:
+Each tool is described with:
 
-```typescript
-// src/agent/tools.ts
-export const search: AgentTool = {
-  name: "search",
-  description: "Search for points of interest...",
-  parametersJsonSchema: SearchInput,  // Typebox schema
-  action: async (args) => {
-    // ... actual implementation
-  }
-};
+- **name**: Identifier (e.g., "search")
+- **description**: What it does in natural language
+- **parameters**: Required parameters and their types (as a schema)
 
-// Becomes in API request:
-{
-  "name": "search",
-  "description": "Search for points of interest...",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "term": { "type": "string", "description": "..." },
-      "buildingId": { "type": "number", "description": "..." }
-      // ... from schema
-    }
-  }
-}
-```
-
-The schema tells the LLM what parameters are required and what types they are.
+This tells the LLM what functions are available and what arguments they accept. The LLM uses this to decide which tools to call.
 
 **3. System Instruction (Role + Guidelines)**
 
 A text prompt that defines how the LLM should behave:
 
 ```
-You are the SFO Airport Assistant. Your role is to help travelers
-find facilities, navigate the terminal, and answer questions.
+You are a research assistant. Your role is to help answer questions
+using available information sources.
 
 Core Principles:
-- Be friendly and concise
-- Take action first: if user asks a question, search for the answer
-  rather than asking for clarification
-- When presenting POIs, include distance and location
+- Be thorough but concise
+- Take action first: search for information rather than asking
+- Always cite your sources
+- If unsure, admit it
 
-You have these tools available: [list of tool names]
+Available tools: search, calculate, summarize
 ```
 
-This is the "role play" prompt that guides the LLM's personality and approach.
+This sets the LLM's personality and approach.
 
 #### The Full Request/Response Cycle
 
 ```
 Your App                          LLM Provider                Your App
 ────────                          ────────────                ────────
-Call generate()
-│
-├─ Prepare request:
-│  ├─ Format message history
-│  ├─ Include tool definitions
-│  ├─ Include system instruction
-│
-└─ Send HTTP POST ──────────────→ Receive at /generate
-                                  │
-                                  ├─ Read conversation history
-                                  ├─ Read available tools
-                                  ├─ Reason about next step
-                                  │
-                                  └─ Respond with either:
-                                     ├─ Tool calls (e.g., "call search")
-                                     └─ Text answer
-
-Receive response ←────────────────
-│
-├─ If tool calls:
-│  ├─ Execute each tool
-│  ├─ Add to history
-│  └─ Call generate() again (loop)
-│
-└─ If text:
-   ├─ Add to history
-   └─ Return to user
+Prepare request:
+  ├─ Format message history
+  ├─ Include tool definitions
+  └─ Include system instruction
+           │
+           └─ Send HTTP POST ──────────────→ Receive request
+                                             │
+                                             ├─ Parse messages
+                                             ├─ Read available tools
+                                             ├─ Reason about next step
+                                             │
+                                             └─ Respond with either:
+                                                ├─ Tool calls
+                                                └─ Text answer
+                                             │
+Response arrives ←─────────────────────────
+   │
+   ├─ If tool calls:
+   │  ├─ Execute each tool in your app
+   │  ├─ Add results to message history
+   │  └─ Call LLM again (loop)
+   │
+   └─ If text:
+      ├─ Add to history
+      └─ Return to user
 ```
+
+Key insight: **You're not asking the LLM a question and getting an answer. You're having an async conversation where the LLM suggests actions, you execute them, and it reasons about results.**
 
 ### Tool Flexibility and Extensibility
 
-The power of this architecture is the flexibility of tools. A tool is just a function—it can do anything.
+The power of agent systems is that tools are just functions—they can do anything. From the LLM's perspective, it simply invokes them by name. What happens inside is entirely up to you.
 
-#### Tool Definition Structure
+#### Tool Definition Pattern
 
-Every tool follows this interface:
+Every tool needs:
 
-```typescript
-// src/agent/types.ts
-interface AgentTool {
-  name: string; // Identifier (e.g., "search")
-  description: string; // What it does (for LLM)
-  parametersJsonSchema: object; // Required parameters (Typebox schema)
-  action: (args) => Promise<unknown>; // The actual implementation
-}
+```
+name: string                    // Identifier (e.g., "search")
+description: string             // Natural language explanation
+parameters: schema              // Required parameters and types
+action: async function          // The actual implementation
 ```
 
-The `action` function receives whatever parameters the LLM passed and can do anything.
+The `action` function receives the parameters and returns a result. That's it.
 
-#### Example 1: Simple Data Lookup
+#### Example Tool Types
 
-```typescript
-// src/agent/tools.ts:32-43
-export const getPOIDetails: AgentTool = {
-  name: "getPOIDetails",
-  description: "Get detailed information about a specific point of interest",
-  parametersJsonSchema: GetPOIDetailsInput, // { poiId: number }
-  action: async (args) => {
-    const { poiId } = args;
-    return map.getPOIDetails(poiId); // Fetch from map service
-  },
-};
+**Example 1: Simple Data Lookup**
+
+A tool that fetches data without side effects:
+
+```
+Tool: getUserData
+Input: { userId: number }
+Output: { name, email, createdAt, ... }
+Implementation: Query database and return user record
 ```
 
-This tool takes a POI ID and returns data. Simple, no side effects.
+**Example 2: Search with Filtering**
 
-#### Example 2: Search with Filtering
+A tool that performs complex queries:
 
-```typescript
-// src/agent/tools.ts:13-23
-export const search: AgentTool = {
-  name: "search",
-  description: "Search for POIs with flexible filtering...",
-  parametersJsonSchema: SearchInput, // { term, buildingId, categoryId, etc. }
-  action: async (args) => {
-    return map.search(args); // Complex query with multiple filters
-  },
-};
+```
+Tool: search
+Input: { query: string, filters: {...}, limit: number }
+Output: Array of ranked results
+Implementation: Query search index with multiple filters,
+               rank by relevance, return top N results
 ```
 
-This tool executes a complex search. It can query with multiple parameters, apply filters, rank results. Same pattern.
+**Example 3: Side Effects (State Changes)**
 
-#### Example 3: Side Effects (UI Updates)
+A tool that modifies application state or UI:
 
-```typescript
-// src/agent/tools.ts:69-80
-export const showPOI: AgentTool = {
-  name: "showPOI",
-  description: "Display a POI on the map...",
-  parametersJsonSchema: ShowPOIInput, // { poiId: number }
-  action: async (args) => {
-    const { poiId } = args;
-    const details = map.getPOIDetails(poiId);
-
-    // Side effect: update UI
-    map.showPOI(poiId);
-
-    return details; // Also return data
-  },
-};
+```
+Tool: bookmark
+Input: { itemId: string }
+Output: { success: boolean, bookmarkId: string }
+Implementation: Save bookmark to database
+              Update UI to show bookmark icon
+              Return confirmation
 ```
 
-This tool does two things: updates the map UI and returns data. Tools can have side effects.
+**Example 4: Chained Operations**
 
-#### Example 4: Chained Operations
+A tool that coordinates multiple steps:
 
-```typescript
-// src/agent/tools.ts:89-100
-export const showDirections: AgentTool = {
-  name: "showDirections",
-  description: "Get turn-by-turn directions between waypoints...",
-  parametersJsonSchema: ShowDirectionsInput, // { waypoints: number[] }
-  action: async (args) => {
-    const { waypoints } = args;
-
-    // Step 1: Compute route
-    const directions = map.getDirections(waypoints);
-
-    // Step 2: Update UI with visualization
-    map.showDirections(waypoints);
-
-    // Step 3: Return formatted result
-    return directions;
-  },
-};
+```
+Tool: generateReport
+Input: { datasetId: string, format: 'pdf' | 'json' }
+Output: { reportUrl: string, generatedAt: timestamp }
+Implementation: Step 1: Query raw data from database
+               Step 2: Analyze and calculate metrics
+               Step 3: Generate formatted output
+               Step 4: Upload to cloud storage
+               Step 5: Return URL
 ```
 
-This tool chains multiple operations: compute route, visualize it, return results.
+#### Error Handling Pattern
 
-#### Error Handling: Uniform Pattern
+All tools should return consistent results, whether they succeed or fail:
 
-All tools are executed in a try/catch block:
-
-```typescript
-// src/agent/Agent.ts:66-97
-private async executeTool(
-  name: string,
-  args: Record<string, unknown>
-): Promise<ToolResult> {
-  const tool = this.toolRegistry.get(name);
-
-  if (!tool) {
-    return { name, result: null, error: "Unknown tool" };
-  }
-
-  try {
-    const result = await tool.action(args);
-    return { name, result };  // Success
-  } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
-    logger.error(`Tool failed: ${name}`, { error: errorMessage });
-    return { name, result: null, error: errorMessage };  // Failure
-  }
-}
+```
+Success: { name, result }
+Failure: { name, error }
 ```
 
-Notice: whether a tool succeeds or fails, it returns the same structure. The LLM sees errors and can decide how to handle them (retry with different params, ask user for clarification, etc.).
+When a tool fails, include the error message. The LLM sees this and can decide how to handle it:
 
-#### Adding a New Tool
+- Retry with different parameters
+- Try an alternative approach
+- Ask the user for clarification
+- Give up and explain the limitation
 
-To add new capability, follow this pattern:
+The key is that tool failures are recoverable—they're just data the LLM sees.
 
-```typescript
-// 1. Define parameter schema (Typebox)
-const MyToolInput = Type.Object({
-  param1: Type.String({ description: "What this is" }),
-  param2: Type.Number({ description: "What this is" }),
-});
+#### Why This Flexibility Matters
 
-// 2. Create tool object
-export const myTool: AgentTool = {
-  name: "myTool",
-  description: "What this tool does, in natural language",
-  parametersJsonSchema: MyToolInput,
-  action: async (args) => {
-    const { param1, param2 } = args as Static<typeof MyToolInput>;
+Because tools are functions in your codebase, they can:
 
-    // Your implementation here
-    // Can call APIs, query databases, update state, whatever
-    const result = await doSomething(param1, param2);
+- **Call external APIs** (weather, maps, payment services)
+- **Query databases** (user data, inventory, analytics)
+- **Perform computations** (calculations, format conversions, aggregations)
+- **Trigger workflows** (send emails, create tickets, schedule tasks)
+- **Update UI state** (highlight elements, scroll to location, open panels)
+- **Chain multiple operations** (fetch data → process → save → notify)
 
-    return result;
-  },
-};
-
-// 3. Register it
-// In Agent constructor:
-this.toolRegistry.set("myTool", myTool);
-```
-
-That's it. The LLM now has access to your new capability.
+The LLM gains instant access to all of this without needing to know how it works. You define what's available, and the LLM decides when to use it.
 
 ---
 
 ## Provider Independence
 
-One of the best design decisions in this codebase is the `IAIClient` interface. It decouples the agent logic from any specific LLM provider.
+One of the most important design decisions in agent systems is separating the agent loop logic from the LLM provider. This allows you to swap providers without touching the core orchestration.
 
-### The Interface
+### The Abstraction
 
-```typescript
-// src/agent/IAIClient.ts
-interface IAIClient {
+Define a simple interface that any LLM provider must implement:
+
+```
+Interface: AIClient
   generate(
     messages: Message[],
-    tools: AgentTool[],
-    systemInstruction: string,
-  ): Promise<GenerateResponse>;
-}
+    tools: Tool[],
+    systemInstruction: string
+  ) → Promise<Response>
 
-interface GenerateResponse {
-  text: string | null;
-  toolCalls: ToolCall[] | null;
-}
+Response:
+  text: string | null
+  toolCalls: ToolCall[] | null
 ```
 
-This is the contract. Any AI provider (Gemini, Claude, OpenAI) just needs to implement these two methods.
+This is the contract. Any provider (OpenAI, Claude, Gemini, local LLM) just implements this method.
 
-### Current Implementation: GeminiClient
+### Provider Implementation
 
-```typescript
-// src/apis/gemini.ts
-export class GeminiClient implements IAIClient {
-  async generate(
-    messages: Message[],
-    tools: AgentTool[],
-    systemInstruction: string,
-  ): Promise<GenerateResponse> {
-    // Convert to Gemini format
-    const request = {
-      contents: this.buildContents(messages),
-      tools: this.toFunctionDeclarations(tools),
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      generationConfig: { temperature: 0.7 },
-    };
+Each provider takes the agent's generic format and converts it to their API:
 
-    // Call Gemini API
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/...`,
-    );
+```
+GeminiClient (implements AIClient)
+  ├─ Converts messages to Gemini format
+  ├─ Calls Gemini API
+  └─ Converts response back to generic format
 
-    // Parse and convert back to agent format
-    return this.parseResponse(response);
-  }
-}
+ClaudeClient (implements AIClient)
+  ├─ Converts messages to Claude format
+  ├─ Calls Claude API
+  └─ Converts response back to generic format
+
+OpenAIClient (implements AIClient)
+  ├─ Converts messages to OpenAI format
+  ├─ Calls OpenAI API
+  └─ Converts response back to generic format
 ```
 
-The agent doesn't care about this implementation. It just calls `generate()` and gets back a standard response.
+The agent loop code is completely identical for all of them.
 
-### Swapping Providers
+### What Changes vs. What Stays the Same
 
-If you wanted to use Claude instead, you'd create:
+**Provider-Specific (varies by LLM)**:
+- API endpoint URL
+- Request format (how to structure the HTTP body)
+- Response format (how to parse the response)
+- Parameter styles (tool parameter schemas might vary slightly)
 
-```typescript
-// src/apis/claudeClient.ts
-export class ClaudeClient implements IAIClient {
-  async generate(
-    messages: Message[],
-    tools: AgentTool[],
-    systemInstruction: string,
-  ): Promise<GenerateResponse> {
-    // Different API format, different request structure
-    // But same input, same output
-    // ...
-  }
-}
-```
+**Provider-Agnostic (identical across all LLMs)**:
+- Message history structure
+- Tool execution logic
+- Loop mechanism (think → act → observe → loop)
+- Iteration management
+- Error handling patterns
 
-Then in your agent setup:
-
-```typescript
-// Use Claude instead of Gemini
-const client = new ClaudeClient(apiKey);
-const agent = new Agent(client, tools);
-```
-
-The agent loop, tool execution, message history—**all stays identical**. Only the LLM provider changes.
-
-### What's Provider-Specific vs. Generic
-
-| Aspect                    | Provider-Specific | Generic |
-| ------------------------- | ----------------- | ------- |
-| API endpoint URL          | ✅                |         |
-| Request format            | ✅                |         |
-| Response format           | ✅                |         |
-| Message history structure |                   | ✅      |
-| Tool execution            |                   | ✅      |
-| Loop mechanism            |                   | ✅      |
-| Iteration management      |                   | ✅      |
-| Error handling            |                   | ✅      |
-
-This means if you understand the agent loop, you understand it for any provider. The only difference is the plumbing (request/response formatting).
+This means: **If you understand the agent loop, you understand it for any provider.** The only difference is the translation layer.
 
 ---
 
@@ -826,3 +513,21 @@ This means if you understand the agent loop, you understand it for any provider.
 2. **State lives in message history**: Every interaction (user message, tool call, tool result, LLM response) is recorded. The LLM always has full context because we send the entire history each time.
 
 3. **Tools are just functions**: They can do anything—query databases, call APIs, update UI, perform calculations. The LLM doesn't care how; it just invokes them by name.
+
+4. **Iteration limits are safety guards**: Iterations prevent infinite loops by gradually constraining the LLM's options, then forcing a final answer.
+
+5. **Abstraction enables flexibility**: The provider abstraction means your core agent logic works with any LLM—Gemini, Claude, OpenAI, local models.
+
+6. **Message history is the state machine**: Everything that happens is persisted and sent back to the LLM. The history is your debugging tool and your context source.
+
+---
+
+## Next Steps
+
+To deepen your understanding of agent orchestration:
+
+- **Trace a full loop**: Run an agent in your application and watch the message history grow through multiple iterations
+- **Understand your prompts**: Study the system instructions and see how they guide LLM behavior
+- **Try adding a tool**: Pick a simple capability (fetch data, do a calculation) and add it as a tool
+- **Implement a new provider**: If you're using one LLM provider, try swapping in another to see how little core logic changes
+- **Debug agent failures**: When the agent behaves unexpectedly, check the message history—it tells you exactly what happened at each step
