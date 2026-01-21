@@ -168,53 +168,39 @@ export class GeminiClient implements IAIClient {
    * Build Gemini contents from messages
    *
    * Converts the agent's message history (including tool calls and results)
-   * to Gemini's content format. Tool calls and results are already persisted
-   * in the messages array as JSON strings.
+   * to Gemini's content format. Uses discriminated unions to determine message type.
    */
   private buildContents(messages: Message[]): GeminiContent[] {
     return messages.map((msg) => {
       const role = msg.role === "user" ? "user" : "model";
 
-      // Only parse JSON if it looks like a tool message (starts with { and contains toolCalls/toolResults)
-      if (msg.content.startsWith("{")) {
-        try {
-          const parsed = JSON.parse(msg.content);
+      switch (msg.type) {
+        case "user_input":
+        case "assistant_response":
+          // Plain text messages
+          return { role, parts: [{ text: msg.content }] };
 
-          // Handle tool calls persisted in history
-          if (parsed.toolCalls && Array.isArray(parsed.toolCalls)) {
-            const parts: GeminiPart[] = parsed.toolCalls.map(
-              (tc: { name: string; args: Record<string, unknown> }) => ({
-                functionCall: { name: tc.name, args: tc.args },
-              }),
-            );
-            return { role: role as "user" | "model", parts };
-          }
+        case "tool_calls": {
+          // Tool calls from assistant
+          const toolCallParts: GeminiPart[] = msg.content.map((tc) => ({
+            functionCall: { name: tc.name, args: tc.args },
+          }));
+          return { role: role as "user" | "model", parts: toolCallParts };
+        }
 
-          // Handle tool results persisted in history
-          if (parsed.toolResults && Array.isArray(parsed.toolResults)) {
-            const parts: GeminiPart[] = parsed.toolResults.map(
-              (tr: { name: string; result?: unknown; error?: string }) => ({
-                functionResponse: {
-                  name: tr.name,
-                  response: {
-                    result: tr.error ? { error: tr.error } : tr.result,
-                  },
-                },
-              }),
-            );
-            return { role: role as "user" | "model", parts };
-          }
-        } catch {
-          // Log warning if JSON parsing fails
-          logger.warn(
-            `Failed to parse tool message as JSON: ${msg.content.slice(0, 50)}...`,
-          );
-          // Fall through to plain text handling below
+        case "tool_results": {
+          // Tool results from execution
+          const toolResultParts: GeminiPart[] = msg.content.map((tr) => ({
+            functionResponse: {
+              name: tr.name,
+              response: {
+                result: tr.error ? { error: tr.error } : tr.result,
+              },
+            },
+          }));
+          return { role: role as "user" | "model", parts: toolResultParts };
         }
       }
-
-      // Treat as plain text message (regular user/assistant messages)
-      return { role, parts: [{ text: msg.content }] };
     });
   }
 

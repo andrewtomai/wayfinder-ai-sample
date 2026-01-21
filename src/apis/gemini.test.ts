@@ -105,9 +105,9 @@ describe("GeminiClient", () => {
         json: async () => mockResponse,
       } as Response);
 
-      const messages: Message[] = [
-        { role: "user", content: "Where is the bathroom?" },
-      ];
+       const messages: Message[] = [
+         { role: "user", type: "user_input", content: "Where is the bathroom?" },
+       ];
 
       const response = await client.generate(messages, [], "You are helpful");
 
@@ -396,10 +396,10 @@ describe("GeminiClient", () => {
         json: async () => mockResponse,
       } as Response);
 
-      const messages: Message[] = [
-        { role: "user", content: "Hello" },
-        { role: "assistant", content: "Hi there" },
-      ];
+       const messages: Message[] = [
+         { role: "user", type: "user_input", content: "Hello" },
+         { role: "assistant", type: "assistant_response", content: "Hi there" },
+       ];
 
       await client.generate(messages, [], "");
 
@@ -425,9 +425,9 @@ describe("GeminiClient", () => {
         json: async () => mockResponse,
       } as Response);
 
-      const messages: Message[] = [
-        { role: "user", content: "What time is it?" },
-      ];
+       const messages: Message[] = [
+         { role: "user", type: "user_input", content: "What time is it?" },
+       ];
 
       await client.generate(messages, [], "");
 
@@ -452,14 +452,13 @@ describe("GeminiClient", () => {
         json: async () => mockResponse,
       } as Response);
 
-      const toolCallMessage: Message = {
-        role: "assistant",
-        content: JSON.stringify({
-          toolCalls: [
-            { name: "search", args: { query: "test" } },
-          ],
-        }),
-      };
+       const toolCallMessage: Message = {
+         role: "assistant",
+         type: "tool_calls",
+         content: [
+           { name: "search", args: { query: "test" } },
+         ],
+       };
 
       await client.generate([toolCallMessage], [], "");
 
@@ -488,17 +487,16 @@ describe("GeminiClient", () => {
         json: async () => mockResponse,
       } as Response);
 
-      const toolResultMessage: Message = {
-        role: "user",
-        content: JSON.stringify({
-          toolResults: [
-            {
-              name: "search",
-              result: [{ id: 1, name: "Bathroom" }],
-            },
-          ],
-        }),
-      };
+       const toolResultMessage: Message = {
+         role: "user",
+         type: "tool_results",
+         content: [
+           {
+             name: "search",
+             result: [{ id: 1, name: "Bathroom" }],
+           },
+         ],
+       };
 
       await client.generate([toolResultMessage], [], "");
 
@@ -529,18 +527,17 @@ describe("GeminiClient", () => {
         json: async () => mockResponse,
       } as Response);
 
-      const toolResultMessage: Message = {
-        role: "user",
-        content: JSON.stringify({
-          toolResults: [
-            {
-              name: "search",
-              result: null,
-              error: "Connection timeout",
-            },
-          ],
-        }),
-      };
+       const toolResultMessage: Message = {
+         role: "user",
+         type: "tool_results",
+         content: [
+           {
+             name: "search",
+             result: null,
+             error: "Connection timeout",
+           },
+         ],
+       };
 
       await client.generate([toolResultMessage], [], "");
 
@@ -571,10 +568,11 @@ describe("GeminiClient", () => {
         json: async () => mockResponse,
       } as Response);
 
-      const invalidMessage: Message = {
-        role: "user",
-        content: "{invalid json",
-      };
+       const invalidMessage: Message = {
+         role: "user",
+         type: "user_input",
+         content: "{invalid json",
+       };
 
       // Should not throw, should treat as plain text
       await expect(
@@ -721,15 +719,14 @@ describe("GeminiClient", () => {
         json: async () => mockResponse,
       } as Response);
 
-      const messages: Message[] = [
-        { role: "user", content: "Find bathrooms" },
-        {
-          role: "assistant",
-          content: JSON.stringify({
-            toolCalls: [{ name: "search", args: { query: "bathroom" } }],
-          }),
-        },
-      ];
+       const messages: Message[] = [
+         { role: "user", type: "user_input", content: "Find bathrooms" },
+         {
+           role: "assistant",
+           type: "tool_calls",
+           content: [{ name: "search", args: { query: "bathroom" } }],
+         },
+       ];
 
       await client.generate(messages, [], "");
 
@@ -765,26 +762,24 @@ describe("GeminiClient", () => {
         json: async () => mockResponse,
       } as Response);
 
-      const messages: Message[] = [
-        { role: "user", content: "Find bathrooms" },
-        {
-          role: "assistant",
-          content: JSON.stringify({
-            toolCalls: [{ name: "search", args: { query: "bathroom" } }],
-          }),
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            toolResults: [
-              {
-                name: "search",
-                result: [{ id: 1, name: "Restroom" }],
-              },
-            ],
-          }),
-        },
-      ];
+       const messages: Message[] = [
+         { role: "user", type: "user_input", content: "Find bathrooms" },
+         {
+           role: "assistant",
+           type: "tool_calls",
+           content: [{ name: "search", args: { query: "bathroom" } }],
+         },
+         {
+           role: "user",
+           type: "tool_results",
+           content: [
+             {
+               name: "search",
+               result: [{ id: 1, name: "Restroom" }],
+             },
+           ],
+         },
+       ];
 
       await client.generate(messages, [], "");
 
@@ -955,7 +950,7 @@ describe("GeminiClient", () => {
       } as Response);
 
       const largeText = "a".repeat(10000);
-      const messages: Message[] = [{ role: "user", content: largeText }];
+       const messages: Message[] = [{ role: "user", type: "user_input", content: largeText }];
 
       await expect(
         client.generate(messages, [], "")

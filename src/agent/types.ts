@@ -42,16 +42,55 @@ export interface AgentRunResult {
 }
 
 /**
- * Represents a single message in the conversation.
+ * Represents a single message in the conversation history.
  *
- * @interface Message
- * @property {string} role - The sender of the message: "user" for user queries or "assistant" for AI responses
- * @property {string} content - The text content of the message
+ * Uses a discriminated union pattern (tagged union) where the `type` field
+ * determines the structure and content type of the message. This eliminates
+ * all parsing magic and provides full type safety.
+ *
+ * Four distinct message types:
+ * - user_input: User's chat query or follow-up
+ * - assistant_response: AI's text response to the user
+ * - tool_calls: AI requesting execution of tools
+ * - tool_results: Results from executing tools
+ *
+ * @example
+ * // User sends a question
+ * { role: "user", type: "user_input", content: "Where is the bathroom?" }
+ *
+ * @example
+ * // AI requests tool execution
+ * { role: "assistant", type: "tool_calls", content: [{ name: "search", args: {...} }] }
+ *
+ * @example
+ * // Results from tool execution
+ * { role: "user", type: "tool_results", content: [{ name: "search", result: {...} }] }
+ *
+ * @example
+ * // AI's final text response
+ * { role: "assistant", type: "assistant_response", content: "The bathroom is on the second floor." }
  */
-export interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
+export type Message =
+  | {
+      role: "user";
+      type: "user_input";
+      content: string;
+    }
+  | {
+      role: "assistant";
+      type: "assistant_response";
+      content: string;
+    }
+  | {
+      role: "assistant";
+      type: "tool_calls";
+      content: ToolCall[];
+    }
+  | {
+      role: "user";
+      type: "tool_results";
+      content: ToolResult[];
+    };
 
 /**
  * Represents a tool call requested by the AI.

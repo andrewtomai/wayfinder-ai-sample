@@ -117,23 +117,15 @@ describe("Agent Context Preservation", () => {
             },
           ],
         };
-      } else if (callCount === 2) {
-        // Second iteration: AI receives search results, calls showPOI
-        // THIS IS THE KEY TEST: Verify that the AI has access to the previous search results
-        const messageHistory = context.messages;
-        const hasToolResults = messageHistory.some((msg: Message) => {
-          try {
-            if (msg.content.startsWith("{")) {
-              const parsed = JSON.parse(msg.content);
-              return parsed.toolResults && Array.isArray(parsed.toolResults);
-            }
-          } catch {
-            // ignore
-          }
-          return false;
-        });
+       } else if (callCount === 2) {
+         // Second iteration: AI receives search results, calls showPOI
+         // THIS IS THE KEY TEST: Verify that the AI has access to the previous search results
+         const messageHistory = context.messages;
+         const hasToolResults = messageHistory.some((msg: Message) => {
+           return msg.type === "tool_results";
+         });
 
-        expect(hasToolResults).toBe(true);
+         expect(hasToolResults).toBe(true);
 
         return {
           toolCalls: [
@@ -188,51 +180,29 @@ describe("Agent Context Preservation", () => {
 
     await agent.chat("Test query");
 
-    // Check message history format
-    const history = agent.getHistory();
+     // Check message history format
+     const history = agent.getHistory();
 
-    // Should have: user message, assistant (tool calls), user (tool results), assistant (final)
-    expect(history.length).toBeGreaterThanOrEqual(3);
+     // Should have: user message, assistant (tool calls), user (tool results), assistant (final)
+     expect(history.length).toBeGreaterThanOrEqual(3);
 
-    // Find the tool calls message (should be JSON)
-    const toolCallsMessage = history.find((msg) => {
-      try {
-        if (msg.content.startsWith("{")) {
-          const parsed = JSON.parse(msg.content);
-          return parsed.toolCalls && Array.isArray(parsed.toolCalls);
-        }
-      } catch {
-        // ignore
-      }
-      return false;
-    });
+     // Find the tool calls message (should have type: "tool_calls")
+     const toolCallsMessage = history.find((msg) => msg.type === "tool_calls");
 
-    expect(toolCallsMessage).toBeDefined();
-    if (toolCallsMessage) {
-      const parsed = JSON.parse(toolCallsMessage.content);
-      expect(parsed.toolCalls).toHaveLength(1);
-      expect(parsed.toolCalls[0].name).toBe("search");
-    }
+     expect(toolCallsMessage).toBeDefined();
+     if (toolCallsMessage && toolCallsMessage.type === "tool_calls") {
+       expect(toolCallsMessage.content).toHaveLength(1);
+       expect(toolCallsMessage.content[0].name).toBe("search");
+     }
 
-    // Find the tool results message (should be JSON)
-    const toolResultsMessage = history.find((msg) => {
-      try {
-        if (msg.content.startsWith("{")) {
-          const parsed = JSON.parse(msg.content);
-          return parsed.toolResults && Array.isArray(parsed.toolResults);
-        }
-      } catch {
-        // ignore
-      }
-      return false;
-    });
+     // Find the tool results message (should have type: "tool_results")
+     const toolResultsMessage = history.find((msg) => msg.type === "tool_results");
 
-    expect(toolResultsMessage).toBeDefined();
-    if (toolResultsMessage) {
-      const parsed = JSON.parse(toolResultsMessage.content);
-      expect(parsed.toolResults).toHaveLength(1);
-      expect(parsed.toolResults[0].name).toBe("search");
-    }
+     expect(toolResultsMessage).toBeDefined();
+     if (toolResultsMessage && toolResultsMessage.type === "tool_results") {
+       expect(toolResultsMessage.content).toHaveLength(1);
+       expect(toolResultsMessage.content[0].name).toBe("search");
+     }
   });
 
   it("should handle error results correctly without breaking context", async () => {
@@ -289,27 +259,20 @@ describe("Agent Context Preservation", () => {
     vi.mocked(getPOIDetails.action).mockResolvedValue({ details: "info" });
     vi.mocked(showPOI.action).mockResolvedValue({ status: "shown" });
 
-    await agent.chat("Multi-tool query");
+     await agent.chat("Multi-tool query");
 
-    const history = agent.getHistory();
+     const history = agent.getHistory();
 
-    // Count tool calls from history
-    let totalTools = 0;
-    for (const msg of history) {
-      try {
-        if (msg.content.startsWith("{")) {
-          const parsed = JSON.parse(msg.content);
-          if (Array.isArray(parsed.toolCalls)) {
-            totalTools += parsed.toolCalls.length;
-          }
-        }
-      } catch {
-        // ignore
-      }
-    }
+     // Count tool calls from history
+     let totalTools = 0;
+     for (const msg of history) {
+       if (msg.type === "tool_calls") {
+         totalTools += msg.content.length;
+       }
+     }
 
-    // Should have 1 + 2 = 3 total tool calls
-    expect(totalTools).toBe(3);
+     // Should have 1 + 2 = 3 total tool calls
+     expect(totalTools).toBe(3);
   });
 
   it("should not confuse user JSON messages with tool messages", async () => {
@@ -325,17 +288,13 @@ describe("Agent Context Preservation", () => {
     const userJsonMessage = JSON.stringify({ query: "find bathrooms" });
     await agent.chat(userJsonMessage);
 
-    const history = agent.getHistory();
+     const history = agent.getHistory();
 
-    // First message should be the JSON string, but should NOT have toolCalls or toolResults
-    const firstMessage = history[0];
-    expect(firstMessage.role).toBe("user");
-    expect(firstMessage.content).toBe(userJsonMessage);
-
-    // Should NOT be parsed as a tool message
-    const parsed = JSON.parse(firstMessage.content);
-    expect(parsed).not.toHaveProperty("toolCalls");
-    expect(parsed).not.toHaveProperty("toolResults");
+     // First message should be the JSON string, but should NOT be a tool message
+     const firstMessage = history[0];
+     expect(firstMessage.role).toBe("user");
+     expect(firstMessage.type).toBe("user_input");
+     expect(firstMessage.content).toBe(userJsonMessage);
   });
 
   it("should maintain separate message histories for multiple agent instances", async () => {
@@ -514,38 +473,37 @@ describe("Iteration Limit Awareness & Graceful Exhaustion", () => {
      * with full context of the previous failed attempt.
      */
 
-    let callCount = 0;
-    mockResponseFn = (context: { messages: Message[] }) => {
-      callCount++;
+     let callCount = 0;
+     mockResponseFn = (context: { messages: Message[] }) => {
+       callCount++;
 
-      // First run: exhaust iterations
-      if (
-        context.messages[context.messages.length - 1]?.content.includes("first")
-      ) {
-        // First query - keep calling tools until exhaustion
-        if (callCount < 10) {
-          return {
-            toolCalls: [
-              {
-                name: "search",
-                args: { query: "first query attempt" },
-              },
-            ],
-          };
-        }
-      } else if (
-        context.messages[context.messages.length - 1]?.content.includes(
-          "second",
-        )
-      ) {
-        // Second query - should provide answer quickly
-        return {
-          text: "Now I understand! Here's the answer based on the previous search.",
-        };
-      }
+       // First run: exhaust iterations
+       const lastMessage = context.messages[context.messages.length - 1];
+       const lastContent = lastMessage?.type === "user_input" || lastMessage?.type === "assistant_response"
+         ? (lastMessage.content as string)
+         : "";
 
-      return { text: "Default response" };
-    };
+       if (lastContent.includes("first")) {
+         // First query - keep calling tools until exhaustion
+         if (callCount < 10) {
+           return {
+             toolCalls: [
+               {
+                 name: "search",
+                 args: { query: "first query attempt" },
+               },
+             ],
+           };
+         }
+       } else if (lastContent.includes("second")) {
+         // Second query - should provide answer quickly
+         return {
+           text: "Now I understand! Here's the answer based on the previous search.",
+         };
+       }
+
+       return { text: "Default response" };
+     };
 
     const { search } = await import("./tools");
     vi.mocked(search.action).mockResolvedValue({
@@ -568,13 +526,17 @@ describe("Iteration Limit Awareness & Graceful Exhaustion", () => {
     );
     expect(result2.message.content).toContain("Now I understand");
 
-    // History should include both conversations
-    const finalHistory = agent.getHistory();
-    expect(finalHistory.length).toBeGreaterThan(historyAfterFirst.length);
-    expect(finalHistory[0].content).toContain("first");
-    expect(
-      finalHistory[finalHistory.length - 1].content.toLowerCase(),
-    ).toContain("understand");
+     // History should include both conversations
+     const finalHistory = agent.getHistory();
+     expect(finalHistory.length).toBeGreaterThan(historyAfterFirst.length);
+     
+     const firstContent = finalHistory[0]?.type === "user_input" ? (finalHistory[0].content as string) : "";
+     const lastContent = finalHistory[finalHistory.length - 1]?.type === "assistant_response"
+       ? (finalHistory[finalHistory.length - 1].content as string)
+       : "";
+       
+     expect(firstContent).toContain("first");
+     expect(lastContent.toLowerCase()).toContain("understand");
   });
 
   it("should remove tools from the final iteration to force text response", async () => {

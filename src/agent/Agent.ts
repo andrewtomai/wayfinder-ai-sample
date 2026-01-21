@@ -53,15 +53,8 @@ export class Agent {
   private countToolsInHistory(): number {
     let totalTools = 0;
     for (const msg of this.messages) {
-      try {
-        if (msg.content.startsWith("{")) {
-          const parsed = JSON.parse(msg.content);
-          if (Array.isArray(parsed.toolCalls)) {
-            totalTools += parsed.toolCalls.length;
-          }
-        }
-      } catch {
-        // Skip messages that don't parse as JSON
+      if (msg.type === "tool_calls") {
+        totalTools += msg.content.length;
       }
     }
     return totalTools;
@@ -166,7 +159,7 @@ Let me try again with that extra info—I'm usually pretty good at finding thing
     logger.info(`User: "${userMessage}"`);
 
     // Add user message to history
-    this.messages.push({ role: "user", content: userMessage });
+    this.messages.push({ role: "user", type: "user_input", content: userMessage });
 
     const allToolCalls: ToolCall[] = [];
     const allToolResults: ToolResult[] = [];
@@ -213,13 +206,15 @@ Let me try again with that extra info—I'm usually pretty good at finding thing
         // Add tool calls to message history
         this.messages.push({
           role: "assistant",
-          content: JSON.stringify({ toolCalls: response.toolCalls }),
+          type: "tool_calls",
+          content: response.toolCalls,
         });
 
         // Add tool results to message history
         this.messages.push({
           role: "user",
-          content: JSON.stringify({ toolResults }),
+          type: "tool_results",
+          content: toolResults,
         });
 
         logger.debug(
@@ -232,21 +227,29 @@ Let me try again with that extra info—I'm usually pretty good at finding thing
         finalText = response.text ?? "";
         logger.info(`Assistant: "${finalText}"`);
 
-        // Add assistant response to message history
-        if (finalText) {
-          this.messages.push({ role: "assistant", content: finalText });
-        }
+         // Add assistant response to message history
+         if (finalText) {
+           this.messages.push({
+             role: "assistant",
+             type: "assistant_response",
+             content: finalText,
+           });
+         }
 
         break;
       }
     }
 
-    // If we hit max iterations without a response, generate a conversational exhaustion message
-    if (iterations >= MAX_ITERATIONS && !finalText) {
-      logger.warn(`Hit max iterations (${MAX_ITERATIONS}), stopping loop`);
-      finalText = this.buildExhaustionMessage(allToolResults, allToolCalls);
-      this.messages.push({ role: "assistant", content: finalText });
-    }
+     // If we hit max iterations without a response, generate a conversational exhaustion message
+     if (iterations >= MAX_ITERATIONS && !finalText) {
+       logger.warn(`Hit max iterations (${MAX_ITERATIONS}), stopping loop`);
+       finalText = this.buildExhaustionMessage(allToolResults, allToolCalls);
+       this.messages.push({
+         role: "assistant",
+         type: "assistant_response",
+         content: finalText,
+       });
+     }
 
     const resultMessage: AgentMessage = {
       id: crypto.randomUUID(),
