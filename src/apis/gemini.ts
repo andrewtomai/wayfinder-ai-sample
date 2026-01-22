@@ -94,6 +94,18 @@ export class GeminiClient implements IAIClient {
     tools: AgentTool[],
     systemInstruction: string,
   ): Promise<GenerateResponse> {
+    return this.generateWithRetry(messages, tools, systemInstruction, 0);
+  }
+
+  /**
+   * Generate with retry logic for malformed function calls
+   */
+  private async generateWithRetry(
+    messages: Message[],
+    tools: AgentTool[],
+    systemInstruction: string,
+    retryCount: number,
+  ): Promise<GenerateResponse> {
     const contents = this.buildContents(messages);
     const functionDeclarations = this.toFunctionDeclarations(tools);
 
@@ -139,6 +151,25 @@ export class GeminiClient implements IAIClient {
       }
 
       const geminiResponse: GeminiResponse = await response.json();
+
+      // Check for MALFORMED_FUNCTION_CALL and retry once
+      const finishReason = geminiResponse.candidates?.[0]?.finishReason;
+      if (
+        finishReason === "MALFORMED_FUNCTION_CALL" &&
+        retryCount === 0
+      ) {
+        logger.error(
+          "⚠️ Gemini returned MALFORMED_FUNCTION_CALL, retrying...",
+          { finishReason },
+        );
+        return this.generateWithRetry(
+          messages,
+          tools,
+          systemInstruction,
+          retryCount + 1,
+        );
+      }
+
       return this.parseResponse(geminiResponse);
     } catch (error) {
       if (error instanceof GeminiError) {
