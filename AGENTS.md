@@ -8,8 +8,8 @@ This guide is for agentic coding tools and AI assistants working in this reposit
 All commands are run with `yarn` (package manager: yarn@4.12.0):
 
 ```bash
-# Development server
-yarn dev
+# Development server for an example (run from examples/chat-agent, etc.)
+cd examples/chat-agent && yarn dev
 
 # Build for production (runs type check first)
 yarn build
@@ -20,14 +20,11 @@ yarn check-types
 # Linting (ESLint)
 yarn lint
 
-# Preview production build locally
-yarn preview
-
 # Run all tests
 yarn test
 
 # Run a single test file
-yarn test src/apis/wayfinder/search/SearchEngine.test.ts
+yarn test packages/wayfinder/search/SearchEngine.test.ts
 
 # Run tests matching a pattern
 yarn test --grep "should find POI by exact name match"
@@ -58,15 +55,15 @@ Run `yarn check-types` to validate without building.
 ## Code Style Guidelines
 
 ### Imports
-- Use **absolute imports** from `src/` (configured in tsconfig)
+- Use **absolute imports** from package names (e.g., `@wayfinder/search`, `@wayfinder/types`)
 - Import types using `type` keyword: `import type { MyType } from "..."`
 - Separate imports into blocks: external → relative types → relative code
 - Example:
   ```typescript
-  import { GeminiClient } from "../apis/gemini";
+  import { GeminiClient } from "@gemini/gemini";
   import type { IAIClient } from "./IAIClient";
   import type { AgentTool } from "./types";
-  import logger from "../utils/logger";
+  import logger from "@logger";
   ```
 
 ### Formatting
@@ -139,7 +136,7 @@ Run `yarn check-types` to validate without building.
 ### Running Tests
 ```bash
 # Run single file
-yarn test src/apis/wayfinder/search/SearchEngine.test.ts
+yarn test packages/wayfinder/search/SearchEngine.test.ts
 
 # Run by test name
 yarn test --grep "should find POI by exact name match"
@@ -173,23 +170,17 @@ yarn test --coverage
 
 ## Repository Structure
 
-```
-src/
-├── agent/              # AI agent orchestration
-│   ├── Agent.ts       # Main agent loop
-│   ├── IAIClient.ts   # AI client interface
-│   ├── types.ts       # Shared types
-│   └── tools.ts       # Tool definitions
-├── apis/
-│   ├── gemini.ts      # Gemini API client
-│   └── wayfinder/     # Wayfinder venue API
-│       ├── search/
-│       ├── types/
-│       └── index.ts
-└── utils/
-    ├── logger.ts      # Logger utility
-    └── messageFilter.ts
-```
+The repository is organized as a monorepo with two main sections:
+
+**Packages** (`packages/`) - Core modules used across examples:
+- `agent/` - AI agent orchestration and loop logic
+- `gemini/` - Gemini API client integration
+- `wayfinder/` - Wayfinder venue API client with search capabilities
+- `logger/` - Logging utility for debugging
+
+**Examples** (`examples/`) - Standalone applications demonstrating specific implementations:
+- `chat-agent/` - React-based chat interface that uses agent packages
+- `kiosk-mode/` - Example kiosk-mode implementation
 
 ## Key Patterns
 
@@ -219,9 +210,9 @@ Always return structured results with error field:
 
 ## Logging
 
-Use the provided logger utility (src/utils/logger.ts):
+Use the provided logger utility (packages/logger/index.ts):
 ```typescript
-import logger from "../utils/logger";
+import logger from "@logger";
 
 logger.debug(message, data);   // Indented debug output
 logger.info(message, data);    // Info output
@@ -244,4 +235,4 @@ Logger is browser-console only with colored output. Use for debugging agent flow
 
 ---
 
-**Last Updated**: January 2024
+**Last Updated**: February 2026
