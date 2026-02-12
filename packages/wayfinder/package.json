@@ -5,6 +5,9 @@
   "type": "module",
   "main": "index.ts",
   "types": "index.ts",
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
   "dependencies": {
     "fuse.js": "^7.1.0",
     "locusmaps-sdk": "^1.1.2",

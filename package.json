@@ -12,7 +12,7 @@
     "build": "yarn workspace @examples/chat-agent build",
     "lint": "eslint .",
     "preview": "yarn workspace @examples/chat-agent preview",
-    "check-types": "tsc -b --noEmit",
+    "check-types": "yarn workspaces foreach -A run check-types",
     "test": "vitest"
   },
   "dependencies": {
