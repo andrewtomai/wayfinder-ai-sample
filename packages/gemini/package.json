@@ -1,0 +1,12 @@
+{
+  "name": "@core/gemini",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "dependencies": {
+    "@core/agent": "workspace:*",
+    "@core/logger": "workspace:*"
+  }
+}

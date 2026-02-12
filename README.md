@@ -55,15 +55,13 @@ The architecture uses a **provider-agnostic AI interface** (`IAIClient`), allowi
 2. **Install dependencies**
 
    ```bash
-   npm install
-   # or
    yarn install
    ```
 
 3. **Set up environment variables**
 
    ```bash
-   cp .env.example .env.local
+   cp examples/chat-agent/.env.example examples/chat-agent/.env.local
    ```
 
    Edit `.env.local` and add your credentials:
@@ -73,8 +71,6 @@ The architecture uses a **provider-agnostic AI interface** (`IAIClient`), allowi
 
 4. **Start the development server**
    ```bash
-   npm run dev
-   # or
    yarn dev
    ```
 5. **Open your browser**
@@ -84,39 +80,62 @@ The architecture uses a **provider-agnostic AI interface** (`IAIClient`), allowi
 
 ## Project Structure
 
+This repository is organized as a **Yarn workspaces monorepo** with shared packages and example applications:
+
 ```
 wayfinder-ai/
-├── src/
-│   ├── agent/                          # AI orchestration
-│   │   ├── Agent.ts                    # Tool execution loop orchestrator
-│   │   ├── IAIClient.ts                # Provider-agnostic AI interface
-│   │   ├── types.ts                    # Shared type definitions
-│   │   ├── tools.ts                    # Tool definitions (search, directions, etc.)
-│   │   └── prompts.ts                  # System instructions and configuration
+├── packages/                              # Shared core packages (@core/*)
+│   ├── agent/                             # AI orchestration framework
+│   │   ├── Agent.ts                       # Tool execution loop orchestrator
+│   │   ├── IAIClient.ts                   # Provider-agnostic AI interface
+│   │   ├── types.ts                       # Shared type definitions
+│   │   ├── messageFilter.ts              # Tool message filtering
+│   │   └── index.ts                       # Barrel exports
 │   │
-│   ├── apis/                           # External service integrations
-│   │   ├── gemini.ts                   # Google Gemini API client (implements IAIClient)
-│   │   └── wayfinder/                  # Atrius Wayfinder SDK wrapper with type safety
+│   ├── gemini/                            # Google Gemini AI provider
+│   │   ├── gemini.ts                      # Gemini API client (implements IAIClient)
+│   │   └── index.ts                       # Barrel exports
 │   │
-│   ├── components/                     # React UI components
-│   │   ├── ChatDrawer.tsx              # Chat interface container
-│   │   ├── ChatMessage.tsx             # Message display with markdown rendering
-│   │   ├── ChatInput.tsx               # User input component
-│   │   └── *.module.css                # Component-scoped styles
+│   ├── wayfinder/                         # Atrius Wayfinder SDK wrapper
+│   │   ├── search/SearchEngine.ts         # Fuzzy search with Fuse.js
+│   │   ├── types/                         # Type-safe venue data schemas
+│   │   └── index.ts                       # Barrel exports + singleton map instance
 │   │
-│   ├── utils/                          # Helper utilities
-│   │   ├── logger.ts                   # Debug logging utility
-│   │   └── messageFilter.ts            # Tool message filtering
-│   │
-│   ├── App.tsx                         # Main application component
-│   └── main.tsx                        # Entry point
+│   └── logger/                            # Debug logging utility
+│       └── index.ts                       # Logger with colored console output
 │
-├── .env.example                        # Environment variable template
-├── vite.config.ts                      # Vite build configuration
-├── tsconfig.json                       # TypeScript configuration
-├── package.json                        # Dependencies and scripts
-└── README.md                           # This file
+├── examples/                              # Example applications (@examples/*)
+│   ├── chat-agent/                        # Chat-based venue assistant
+│   │   ├── src/
+│   │   │   ├── tools.ts                   # Tool definitions (search, directions, etc.)
+│   │   │   ├── prompts.ts                 # System instructions and configuration
+│   │   │   ├── App.tsx                    # Main application component
+│   │   │   ├── main.tsx                   # Entry point
+│   │   │   └── components/               # React UI components + CSS modules
+│   │   ├── index.html                     # HTML entry point
+│   │   ├── vite.config.ts                 # Vite build configuration
+│   │   ├── tsconfig.json                  # TypeScript configuration
+│   │   ├── package.json                   # Dependencies and scripts
+│   │   └── .env.example                   # Environment variable template
+│   │
+│   └── kiosk-mode/                        # Kiosk display (placeholder)
+│       └── README.md                      # Placeholder documentation
+│
+├── tsconfig.base.json                     # Shared TypeScript configuration
+├── package.json                           # Root workspace configuration
+└── README.md                              # This file
 ```
+
+### Workspace Packages
+
+| Package | Scope | Description |
+|---------|-------|-------------|
+| `@core/agent` | `packages/agent` | AI agent framework with tool execution loop |
+| `@core/gemini` | `packages/gemini` | Google Gemini AI client implementation |
+| `@core/wayfinder` | `packages/wayfinder` | Atrius Wayfinder SDK wrapper with search |
+| `@core/logger` | `packages/logger` | Debug logging utility |
+| `@examples/chat-agent` | `examples/chat-agent` | Chat-based venue assistant example |
+| `@examples/kiosk-mode` | `examples/kiosk-mode` | Kiosk display example (placeholder) |
 
 ---
 
@@ -124,19 +143,20 @@ wayfinder-ai/
 
 The application follows a clean separation of concerns:
 
-### **AI Layer** (`src/agent/`)
+### **AI Layer** (`packages/agent`)
 
 - **Agent**: Orchestrates the conversation loop, executing tools and managing state
 - **IAIClient**: Provider-agnostic interface that abstracts AI provider details
-- **Tools**: Definitions for venue operations (search, directions, POI details)
+- **AgentConfig**: Dependency injection pattern — tools, prompts, and AI client are provided at construction
 
-### **Provider Layer** (`src/apis/`)
+### **Provider Layer** (`packages/gemini`, `packages/wayfinder`)
 
 - **GeminiClient**: Implements IAIClient for Google Gemini; handles API specifics
 - **WayfinderSDK**: Wraps locusmaps-sdk for type-safe venue operations
 
-### **UI Layer** (`src/components/`)
+### **Example Layer** (`examples/chat-agent`)
 
+- **Tools & Prompts**: Example-specific tool definitions and system instructions
 - **ChatDrawer**: Main chat interface with message history
 - **ChatMessage**: Renders AI responses with markdown support
 - **ChatInput**: User input with optional suggestions
@@ -176,6 +196,7 @@ Map updates via locusmaps-sdk
 | **Fuzzy Search**       | fuse.js               | Client-side search enhancement         |
 | **Testing**            | Vitest                | Unit and integration tests             |
 | **Linting**            | ESLint + TypeScript   | Code quality and type safety           |
+| **Monorepo**           | Yarn Workspaces       | Package management and linking         |
 
 ---
 
@@ -183,7 +204,7 @@ Map updates via locusmaps-sdk
 
 ### Environment Variables
 
-Create a `.env.local` file based on `.env.example`:
+Create a `.env.local` file in `examples/chat-agent/` based on `.env.example`:
 
 ```env
 # Atrius Wayfinder Venue Configuration
@@ -206,10 +227,12 @@ VITE_AI_CLIENT_TEMPERATURE=0.7
 
 ## Running the Project
 
+All commands are run from the repository root using Yarn workspaces.
+
 ### Development
 
 ```bash
-npm run dev
+yarn dev
 ```
 
 Starts a local dev server with hot module reloading. Open `http://localhost:5173`.
@@ -217,15 +240,15 @@ Starts a local dev server with hot module reloading. Open `http://localhost:5173
 ### Build for Production
 
 ```bash
-npm run build
+yarn build
 ```
 
-Creates an optimized production build in the `dist/` directory.
+Creates an optimized production build in `examples/chat-agent/dist/`.
 
 ### Preview Production Build
 
 ```bash
-npm run preview
+yarn preview
 ```
 
 Serves the production build locally for testing.
@@ -233,7 +256,7 @@ Serves the production build locally for testing.
 ### Type Checking
 
 ```bash
-npm run check-types
+yarn check-types
 ```
 
 Runs TypeScript compiler without building (catch type errors).
@@ -241,7 +264,7 @@ Runs TypeScript compiler without building (catch type errors).
 ### Linting
 
 ```bash
-npm run lint
+yarn lint
 ```
 
 Checks code quality with ESLint.
@@ -249,10 +272,22 @@ Checks code quality with ESLint.
 ### Testing
 
 ```bash
-npm run test
+yarn test
 ```
 
 Runs unit tests with Vitest.
+
+### Workspace-Specific Commands
+
+You can also run commands for a specific workspace:
+
+```bash
+# Run dev server for chat-agent example
+yarn workspace @examples/chat-agent dev
+
+# Build a specific example
+yarn workspace @examples/chat-agent build
+```
 
 ---
 
@@ -292,6 +327,7 @@ This architecture allows AI to reason about tool use and refine results before r
 - **Provider-Agnostic Design**: IAIClient interface enables AI provider swapping
 - **Type Safety**: Full TypeScript throughout for catch-time error detection
 - **Debug Logging**: Colored console logs for understanding tool execution flow
+- **Monorepo Architecture**: Shared packages enable building multiple example apps
 
 ---
 
@@ -299,7 +335,7 @@ This architecture allows AI to reason about tool use and refine results before r
 
 ### Customize System Instructions
 
-The AI's behavior is guided by system instructions in `src/agent/prompts.ts`. You can customize the `BASE_SYSTEM_INSTRUCTION` to:
+The AI's behavior is guided by system instructions in `examples/chat-agent/src/prompts.ts`. You can customize the `BASE_SYSTEM_INSTRUCTION` to:
 
 - Change the assistant's tone and personality
 - Add domain-specific knowledge or protocols
@@ -310,21 +346,29 @@ The AI's behavior is guided by system instructions in `src/agent/prompts.ts`. Yo
 
 To add a new tool (e.g., amenity discovery, facility lookup):
 
-1. Define the tool interface in `src/agent/types.ts`
-2. Implement the tool function in `src/agent/tools.ts`
-3. Add it to the tools array in `src/agent/Agent.ts`
-4. The tool is now available to the AI (no UI changes needed)
+1. Define the tool in `examples/chat-agent/src/tools.ts` using the `AgentTool` interface from `@core/agent`
+2. Add it to the tools array in `examples/chat-agent/src/components/ChatDrawer.tsx`
+3. The tool is now available to the AI (no UI changes needed)
 
 ### Switch AI Providers
 
 To use Claude, OpenAI, or another provider:
 
-1. Create a new client file (e.g., `src/apis/claude.ts`)
-1. Implement the `IAIClient` interface
-1. Update `src/agent/Agent.ts` to instantiate your new client
-1. Everything else works unchanged
+1. Create a new package (e.g., `packages/claude/`) or add a client file
+2. Implement the `IAIClient` interface from `@core/agent`
+3. Update the `AgentConfig` in your example to use the new client
+4. Everything else works unchanged
 
 The provider-agnostic architecture means the Agent, tools, and UI don't care which AI provider you use—only the specific client implementation changes.
+
+### Create a New Example
+
+To build a different type of application using the same core packages:
+
+1. Create a new directory under `examples/` (e.g., `examples/voice-assistant/`)
+2. Add a `package.json` with `@core/*` workspace dependencies
+3. Add a `tsconfig.json` extending `../../tsconfig.base.json`
+4. Build your application using the shared packages
 
 ---
 
@@ -340,7 +384,7 @@ For issues with this sample:
 
 - Check the [Atrius documentation](https://docs.atrius.com)
 - Review the inline code comments (especially `IAIClient.ts` for architecture details)
-- Run tests to verify setup: `npm run test`
+- Run tests to verify setup: `yarn test`
 
 ---
 

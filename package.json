@@ -3,12 +3,16 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "yarn workspace @examples/chat-agent dev",
+    "build": "yarn workspace @examples/chat-agent build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "check-types": "tsc --noEmit",
+    "preview": "yarn workspace @examples/chat-agent preview",
+    "check-types": "tsc -b --noEmit",
     "test": "vitest"
   },
   "dependencies": {

@@ -249,6 +249,39 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@core/agent@workspace:*, @core/agent@workspace:packages/agent":
+  version: 0.0.0-use.local
+  resolution: "@core/agent@workspace:packages/agent"
+  dependencies:
+    "@core/logger": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"@core/gemini@workspace:*, @core/gemini@workspace:packages/gemini":
+  version: 0.0.0-use.local
+  resolution: "@core/gemini@workspace:packages/gemini"
+  dependencies:
+    "@core/agent": "workspace:*"
+    "@core/logger": "workspace:*"
+  languageName: unknown
+  linkType: soft
+
+"@core/logger@workspace:*, @core/logger@workspace:packages/logger":
+  version: 0.0.0-use.local
+  resolution: "@core/logger@workspace:packages/logger"
+  languageName: unknown
+  linkType: soft
+
+"@core/wayfinder@workspace:*, @core/wayfinder@workspace:packages/wayfinder":
+  version: 0.0.0-use.local
+  resolution: "@core/wayfinder@workspace:packages/wayfinder"
+  dependencies:
+    fuse.js: "npm:^7.1.0"
+    locusmaps-sdk: "npm:^1.1.2"
+    typebox: "npm:^1.0.78"
+  languageName: unknown
+  linkType: soft
+
 "@csstools/color-helpers@npm:^5.1.0":
   version: 5.1.0
   resolution: "@csstools/color-helpers@npm:5.1.0"
@@ -417,6 +450,37 @@ __metadata:
   checksum: 10c0/51600f78b798f172a9915dffb295e2ffb44840d583427bc732baf12ecb963eb841b253300e657da91d890f4b323d10a1bd12934bf293e3018d8bb66fdce5217b
   languageName: node
   linkType: hard
+
+"@examples/chat-agent@workspace:examples/chat-agent":
+  version: 0.0.0-use.local
+  resolution: "@examples/chat-agent@workspace:examples/chat-agent"
+  dependencies:
+    "@core/agent": "workspace:*"
+    "@core/gemini": "workspace:*"
+    "@core/logger": "workspace:*"
+    "@core/wayfinder": "workspace:*"
+    "@types/react": "npm:^19.2.5"
+    "@types/react-dom": "npm:^19.2.3"
+    "@vitejs/plugin-react": "npm:^5.1.1"
+    react: "npm:^19.2.0"
+    react-dom: "npm:^19.2.0"
+    react-markdown: "npm:^10.1.0"
+    typebox: "npm:^1.0.78"
+    typescript: "npm:~5.9.3"
+    vite: "npm:rolldown-vite@7.2.5"
+  languageName: unknown
+  linkType: soft
+
+"@examples/kiosk-mode@workspace:examples/kiosk-mode":
+  version: 0.0.0-use.local
+  resolution: "@examples/kiosk-mode@workspace:examples/kiosk-mode"
+  dependencies:
+    "@core/agent": "workspace:*"
+    "@core/gemini": "workspace:*"
+    "@core/logger": "workspace:*"
+    "@core/wayfinder": "workspace:*"
+  languageName: unknown
+  linkType: soft
 
 "@exodus/bytes@npm:^1.6.0":
   version: 1.8.0

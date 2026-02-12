@@ -1,0 +1,13 @@
+{
+  "name": "@core/wayfinder",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "index.ts",
+  "types": "index.ts",
+  "dependencies": {
+    "fuse.js": "^7.1.0",
+    "locusmaps-sdk": "^1.1.2",
+    "typebox": "^1.0.78"
+  }
+}

@@ -1,7 +1,11 @@
 {
   "files": [],
   "references": [
-    { "path": "./tsconfig.app.json" },
+    { "path": "./packages/agent" },
+    { "path": "./packages/gemini" },
+    { "path": "./packages/wayfinder" },
+    { "path": "./packages/logger" },
+    { "path": "./examples/chat-agent" },
     { "path": "./tsconfig.node.json" }
   ]
 }

@@ -9,12 +9,4 @@ export default defineConfig({
       localsConvention: "camelCase",
     },
   },
-  test: {
-    include: [
-      "packages/**/*.test.{ts,tsx}",
-      "examples/**/*.test.{ts,tsx}",
-    ],
-    exclude: ["**/node_modules/**"],
-    environment: "jsdom",
-  },
 });
