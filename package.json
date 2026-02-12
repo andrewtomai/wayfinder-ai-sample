@@ -8,10 +8,7 @@
     "examples/*"
   ],
   "scripts": {
-    "dev": "yarn workspace @examples/chat-agent dev",
-    "build": "yarn workspace @examples/chat-agent build",
     "lint": "eslint .",
-    "preview": "yarn workspace @examples/chat-agent preview",
     "check-types": "yarn workspaces foreach -A run check-types",
     "test": "vitest"
   },
