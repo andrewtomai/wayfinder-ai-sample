@@ -986,4 +986,399 @@ describe("GeminiClient", () => {
       expect(response.toolCalls?.[0]?.args).toBeNull();
     });
   });
+
+  // ============================================================================
+  // Thought Signature Tests
+  // ============================================================================
+
+  describe("Thought Signature Support", () => {
+    describe("Signature Extraction", () => {
+      it("should extract thoughtSignature from function call response", async () => {
+        const mockResponse = {
+          candidates: [
+            {
+              content: {
+                role: "model",
+                parts: [
+                  {
+                    functionCall: {
+                      name: "search",
+                      args: { query: "coffee" },
+                    },
+                    thoughtSignature: "encrypted-signature-token-abc123",
+                  },
+                ],
+              },
+              finishReason: "TOOL_CALL",
+            },
+          ],
+        };
+
+        fetchMock.mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        } as Response);
+
+        const response = await client.generate([], [], "");
+
+        expect(response.toolCalls).toHaveLength(1);
+        expect(response.toolCalls?.[0]?.thoughtSignature).toBe(
+          "encrypted-signature-token-abc123"
+        );
+      });
+
+      it("should handle function calls without thoughtSignature (backward compatibility)", async () => {
+        const mockResponse = {
+          candidates: [
+            {
+              content: {
+                role: "model",
+                parts: [
+                  {
+                    functionCall: {
+                      name: "search",
+                      args: { query: "coffee" },
+                    },
+                    // No thoughtSignature field
+                  },
+                ],
+              },
+              finishReason: "TOOL_CALL",
+            },
+          ],
+        };
+
+        fetchMock.mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        } as Response);
+
+        const response = await client.generate([], [], "");
+
+        expect(response.toolCalls).toHaveLength(1);
+        expect(response.toolCalls?.[0]?.thoughtSignature).toBeUndefined();
+      });
+
+      it("should extract signature from first call only in parallel function calls", async () => {
+        // Per Gemini API: only the first function call has a signature in parallel calls
+        const mockResponse = {
+          candidates: [
+            {
+              content: {
+                role: "model",
+                parts: [
+                  {
+                    functionCall: {
+                      name: "search",
+                      args: { query: "coffee" },
+                    },
+                    thoughtSignature: "first-call-signature",
+                  },
+                  {
+                    functionCall: {
+                      name: "getPOIDetails",
+                      args: { poiId: 123 },
+                    },
+                    // No signature on second parallel call
+                  },
+                ],
+              },
+              finishReason: "TOOL_CALL",
+            },
+          ],
+        };
+
+        fetchMock.mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        } as Response);
+
+        const response = await client.generate([], [], "");
+
+        expect(response.toolCalls).toHaveLength(2);
+        expect(response.toolCalls?.[0]?.thoughtSignature).toBe("first-call-signature");
+        expect(response.toolCalls?.[1]?.thoughtSignature).toBeUndefined();
+      });
+    });
+
+    describe("Signature Re-injection", () => {
+      it("should include thoughtSignature when building request from tool_calls message", async () => {
+        const mockResponse = {
+          candidates: [
+            {
+              content: { role: "model", parts: [{ text: "Here are the results" }] },
+            },
+          ],
+        };
+
+        fetchMock.mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        } as Response);
+
+        const messages: Message[] = [
+          { role: "user", type: "user_input", content: "Find coffee shops" },
+          {
+            role: "assistant",
+            type: "tool_calls",
+            content: [
+              {
+                name: "search",
+                args: { query: "coffee" },
+                thoughtSignature: "preserved-signature-xyz",
+              },
+            ],
+          },
+          {
+            role: "user",
+            type: "tool_results",
+            content: [
+              { name: "search", result: [{ id: 1, name: "Starbucks" }] },
+            ],
+          },
+        ];
+
+        await client.generate(messages, [], "");
+
+        const callArgs = fetchMock.mock.calls[0][1];
+        const body = JSON.parse((callArgs as RequestInit).body as string);
+
+        // Find the tool call content
+        const toolCallContent = body.contents.find(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (c: any) => c.parts.some((p: any) => p.functionCall)
+        );
+
+        expect(toolCallContent).toBeDefined();
+        expect(toolCallContent.parts[0].thoughtSignature).toBe("preserved-signature-xyz");
+      });
+
+      it("should not include thoughtSignature field when absent from ToolCall", async () => {
+        const mockResponse = {
+          candidates: [
+            {
+              content: { role: "model", parts: [{ text: "ok" }] },
+            },
+          ],
+        };
+
+        fetchMock.mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        } as Response);
+
+        const messages: Message[] = [
+          {
+            role: "assistant",
+            type: "tool_calls",
+            content: [
+              {
+                name: "search",
+                args: { query: "coffee" },
+                // No thoughtSignature
+              },
+            ],
+          },
+        ];
+
+        await client.generate(messages, [], "");
+
+        const callArgs = fetchMock.mock.calls[0][1];
+        const body = JSON.parse((callArgs as RequestInit).body as string);
+
+        const toolCallPart = body.contents[0].parts[0];
+        expect(toolCallPart.functionCall).toBeDefined();
+        expect(toolCallPart.thoughtSignature).toBeUndefined();
+      });
+    });
+
+    describe("Round-Trip Tests", () => {
+      it("should preserve signature through extract -> store -> re-inject cycle", async () => {
+        const originalSignature = "round-trip-signature-test-12345";
+
+        // Step 1: API returns tool call with signature
+        const extractResponse = {
+          candidates: [
+            {
+              content: {
+                role: "model",
+                parts: [
+                  {
+                    functionCall: {
+                      name: "search",
+                      args: { query: "bathrooms" },
+                    },
+                    thoughtSignature: originalSignature,
+                  },
+                ],
+              },
+              finishReason: "TOOL_CALL",
+            },
+          ],
+        };
+
+        fetchMock.mockResolvedValueOnce({
+          ok: true,
+          json: async () => extractResponse,
+        } as Response);
+
+        // Extract the tool call
+        const messages1: Message[] = [
+          { role: "user", type: "user_input", content: "Find bathrooms" },
+        ];
+        const response1 = await client.generate(messages1, [], "");
+
+        // Verify extraction
+        expect(response1.toolCalls?.[0]?.thoughtSignature).toBe(originalSignature);
+
+        // Step 2: Re-inject by including in next request
+        const finalResponse = {
+          candidates: [
+            {
+              content: {
+                role: "model",
+                parts: [{ text: "The bathroom is on floor 2" }],
+              },
+              finishReason: "STOP",
+            },
+          ],
+        };
+
+        fetchMock.mockResolvedValueOnce({
+          ok: true,
+          json: async () => finalResponse,
+        } as Response);
+
+        // Build next request with the stored tool call (including signature)
+        const messages2: Message[] = [
+          { role: "user", type: "user_input", content: "Find bathrooms" },
+          {
+            role: "assistant",
+            type: "tool_calls",
+            content: response1.toolCalls!, // Includes signature
+          },
+          {
+            role: "user",
+            type: "tool_results",
+            content: [{ name: "search", result: [{ id: 1, name: "Restroom" }] }],
+          },
+        ];
+
+        await client.generate(messages2, [], "");
+
+        // Verify signature was re-injected in the request
+        const callArgs = fetchMock.mock.calls[1][1];
+        const body = JSON.parse((callArgs as RequestInit).body as string);
+
+        const toolCallContent = body.contents.find(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (c: any) => c.parts.some((p: any) => p.functionCall)
+        );
+
+        expect(toolCallContent.parts[0].thoughtSignature).toBe(originalSignature);
+      });
+    });
+
+    describe("Multi-Turn Conversations", () => {
+      it("should preserve signatures across multiple turns", async () => {
+        const mockResponse = {
+          candidates: [
+            {
+              content: { role: "model", parts: [{ text: "ok" }] },
+            },
+          ],
+        };
+
+        fetchMock.mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        } as Response);
+
+        // Multi-turn conversation with multiple tool calls
+        const messages: Message[] = [
+          { role: "user", type: "user_input", content: "Find coffee" },
+          {
+            role: "assistant",
+            type: "tool_calls",
+            content: [
+              { name: "search", args: { query: "coffee" }, thoughtSignature: "sig-turn-1" },
+            ],
+          },
+          {
+            role: "user",
+            type: "tool_results",
+            content: [{ name: "search", result: [{ id: 1 }] }],
+          },
+          { role: "assistant", type: "assistant_response", content: "Found some options" },
+          { role: "user", type: "user_input", content: "Get details on the first one" },
+          {
+            role: "assistant",
+            type: "tool_calls",
+            content: [
+              { name: "getDetails", args: { poiId: 1 }, thoughtSignature: "sig-turn-2" },
+            ],
+          },
+          {
+            role: "user",
+            type: "tool_results",
+            content: [{ name: "getDetails", result: { name: "Starbucks" } }],
+          },
+        ];
+
+        await client.generate(messages, [], "");
+
+        const callArgs = fetchMock.mock.calls[0][1];
+        const body = JSON.parse((callArgs as RequestInit).body as string);
+
+        // Find all tool call contents
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const toolCallContents = body.contents.filter((c: any) =>
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          c.parts.some((p: any) => p.functionCall)
+        );
+
+        expect(toolCallContents).toHaveLength(2);
+        expect(toolCallContents[0].parts[0].thoughtSignature).toBe("sig-turn-1");
+        expect(toolCallContents[1].parts[0].thoughtSignature).toBe("sig-turn-2");
+      });
+    });
+
+    describe("Parallel Function Calls with Signatures", () => {
+      it("should preserve signature on first call only when re-injecting parallel calls", async () => {
+        const mockResponse = {
+          candidates: [
+            {
+              content: { role: "model", parts: [{ text: "ok" }] },
+            },
+          ],
+        };
+
+        fetchMock.mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockResponse,
+        } as Response);
+
+        // Message with parallel tool calls - only first has signature
+        const messages: Message[] = [
+          {
+            role: "assistant",
+            type: "tool_calls",
+            content: [
+              { name: "search", args: { query: "coffee" }, thoughtSignature: "parallel-sig" },
+              { name: "getDetails", args: { poiId: 1 } }, // No signature
+            ],
+          },
+        ];
+
+        await client.generate(messages, [], "");
+
+        const callArgs = fetchMock.mock.calls[0][1];
+        const body = JSON.parse((callArgs as RequestInit).body as string);
+
+        const parts = body.contents[0].parts;
+        expect(parts[0].thoughtSignature).toBe("parallel-sig");
+        expect(parts[1].thoughtSignature).toBeUndefined();
+      });
+    });
+  });
 });

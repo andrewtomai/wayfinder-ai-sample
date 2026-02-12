@@ -101,10 +101,17 @@ export type Message =
  * @interface ToolCall
  * @property {string} name - The name of the tool to invoke (e.g., "search_locations")
  * @property {Record<string, unknown>} args - The arguments to pass to the tool as key-value pairs
+ * @property {string} [thoughtSignature] - Provider-specific metadata for preserving model reasoning.
+ *   For Gemini 3+ models, this is an encrypted token representing the model's internal reasoning
+ *   that must be preserved and passed back in conversation history. The signature is opaque and
+ *   should be stored verbatim without modification. Optional field - not all providers use this.
+ *   For parallel function calls, only the first call in a response will have a signature.
+ *   Signatures are valid for one turn and must be re-sent exactly as received in subsequent requests.
  */
 export interface ToolCall {
   name: string;
   args: Record<string, unknown>;
+  thoughtSignature?: string;
 }
 
 /**

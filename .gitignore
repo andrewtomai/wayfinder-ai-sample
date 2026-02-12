@@ -35,4 +35,4 @@ dist-ssr
 .env
 .opencode
 openspec
-.tsbuildinfo
+tsconfig.tsbuildinfo
