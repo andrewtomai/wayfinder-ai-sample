@@ -43,6 +43,14 @@ export const POI = Type.Object({
   phone: Type.Optional(Type.String()),
   position: POIPosition,
   zoomRadius: Type.String(),
+  queue: Type.Optional(
+    Type.Object({
+      defaultQueueTime: Type.Number(),
+      primaryQueueId: Type.String(),
+      queueSubtype: Type.String(),
+      queueType: Type.String(),
+    }),
+  ),
   dynamicData: Type.Optional(
     Type.Object({
       "open-closed-status": Type.Optional(

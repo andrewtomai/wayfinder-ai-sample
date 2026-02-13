@@ -2,13 +2,28 @@
 /// <reference path="./locusmaps-sdk.d.ts" />
 import AtriusMaps from "locusmaps-sdk";
 import type { MapInstance } from "locusmaps-sdk";
-import type { Static } from "typebox";
+import type { Static, TSchema } from "typebox";
 import { Value } from "typebox/value";
+import logger from "@core/logger";
 import { Config } from "./types/config";
 import { Directions, MultipointDirections } from "./types/directions";
 import { POI } from "./types/poi";
 import { BuildingsAndLevels } from "./types/venue";
-import { SearchEngine, SearchResult, SearchOptions } from "./search/SearchEngine";
+import {
+  SearchEngine,
+  SearchResult,
+  SearchOptions,
+} from "./search/SearchEngine";
+
+const outputValidation = (type: TSchema, data: unknown) => {
+  try {
+    return Value.Parse(type, data);
+  } catch (e) {
+    const errors = Value.Errors(type, data);
+    logger.error("Output Validation Failure", { errors, data });
+    throw e;
+  }
+};
 
 class AtriusMap {
   private readonly map;
@@ -54,26 +69,25 @@ class AtriusMap {
 
   async getPOIDetails(poiId: number) {
     const result = await this.map.getPOIDetails(poiId);
-    return Value.Parse(POI, result);
+    return outputValidation(POI, result);
   }
 
   async showPOI(poiId: number) {
     const data = await this.map.getPOIDetails(poiId);
     await this.map.showPOI(poiId);
-    return Value.Parse(POI, data);
+    return outputValidation(POI, data);
   }
 
   async showDirections(waypoints: number[]) {
     const args = waypoints.map((poiId) => ({ poiId }));
     const result = await this.map.getDirectionsMultiple(args);
     await this.map.showNavigationMultiple(args);
-    return Value.Parse(MultipointDirections, result);
+    return outputValidation(MultipointDirections, result);
   }
 
   async getStructures() {
     const result = await this.map.getStructures();
-    const cleaned = Value.Clean(BuildingsAndLevels, result);
-    return Value.Parse(BuildingsAndLevels, cleaned);
+    return outputValidation(BuildingsAndLevels, result);
   }
 
   async search(options: Static<typeof SearchOptions>) {
@@ -94,7 +108,13 @@ const getMapInstance = () =>
 
 export default getMapInstance;
 
-export { AtriusMap, SearchEngine, SearchResult, Directions, MultipointDirections };
+export {
+  AtriusMap,
+  SearchEngine,
+  SearchResult,
+  Directions,
+  MultipointDirections,
+};
 export { SearchOptions };
 export { Config } from "./types/config";
 export { POI } from "./types/poi";
