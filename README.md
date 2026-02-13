@@ -34,7 +34,7 @@ This repository contains multiple example applications. Choose the one that matc
 
 A conversational interface for venue navigation. Users interact with an indoor map through natural language queries—asking about locations, amenities, and wayfinding—while an AI assistant processes requests and provides map-aware responses.
 
-**Best for:** Building chatbot-driven venue assistants, NLU-based navigation
+**Best for:** Building chatbot-driven venue assistants, Natural Language based navigation
 
 👉 **[Get started with Chat Agent](examples/chat-agent/README.md)**
 
