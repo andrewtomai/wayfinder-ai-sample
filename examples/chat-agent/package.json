@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@core/agent": "workspace:*",
+    "@core/agent-tools": "workspace:*",
     "@core/chat-ui": "workspace:*",
     "@core/gemini": "workspace:*",
     "@core/logger": "workspace:*",

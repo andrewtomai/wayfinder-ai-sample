@@ -9,30 +9,15 @@ import {
 import { Agent } from "@core/agent";
 import type { AgentConfig } from "@core/agent";
 import { GeminiClient } from "@core/gemini";
-import {
-  search,
-  getPOIDetails,
-  getBuildingsAndLevels,
-  getCategories,
-  showPOI,
-  showDirections,
-  getSecurityWaitTimes,
-} from "../tools";
+import tools from "@core/agent-tools";
+import { search, showDirections } from "../tools";
 import { buildSystemInstruction, MAX_ITERATIONS } from "../prompts";
 import styles from "./ChatDrawer.module.css";
 
 // Initialize the agent once with full configuration
 const agentConfig: AgentConfig = {
   client: new GeminiClient(),
-  tools: [
-    search,
-    getPOIDetails,
-    getBuildingsAndLevels,
-    getCategories,
-    showPOI,
-    showDirections,
-    getSecurityWaitTimes,
-  ],
+  tools: [search, showDirections, ...tools],
   buildSystemInstruction,
   maxIterations: MAX_ITERATIONS,
 };

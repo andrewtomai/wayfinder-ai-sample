@@ -249,6 +249,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@core/agent-tools@workspace:*, @core/agent-tools@workspace:packages/agent-tools":
+  version: 0.0.0-use.local
+  resolution: "@core/agent-tools@workspace:packages/agent-tools"
+  dependencies:
+    "@core/agent": "workspace:*"
+    "@core/wayfinder": "workspace:*"
+    typebox: "npm:^1.0.78"
+  languageName: unknown
+  linkType: soft
+
 "@core/agent@workspace:*, @core/agent@workspace:packages/agent":
   version: 0.0.0-use.local
   resolution: "@core/agent@workspace:packages/agent"
@@ -263,7 +273,7 @@ __metadata:
   dependencies:
     react-markdown: "npm:^10.1.0"
   peerDependencies:
-    react: ^19.2.0
+    react: ^19.0.0
   languageName: unknown
   linkType: soft
 
@@ -466,6 +476,7 @@ __metadata:
   resolution: "@examples/chat-agent@workspace:examples/chat-agent"
   dependencies:
     "@core/agent": "workspace:*"
+    "@core/agent-tools": "workspace:*"
     "@core/chat-ui": "workspace:*"
     "@core/gemini": "workspace:*"
     "@core/logger": "workspace:*"
