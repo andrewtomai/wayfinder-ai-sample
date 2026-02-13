@@ -1,4 +1,4 @@
-# Chat Agent Example
+# Basic Chat Agent Example
 
 A conversational interface for venue navigation. This example demonstrates a practical pattern for integrating Atrius Wayfinder's mapping experience and data with conversational AI. Users can interact with an indoor venue map through natural language queries—asking about locations, amenities, and navigation—while the AI processes requests and uses the SDK to provide accurate, map-aware responses.
 
@@ -25,7 +25,7 @@ The architecture uses a **provider-agnostic AI interface** (`IAIClient`), allowi
 2. **Set up environment variables**
 
    ```bash
-   cp .env.example ./examples/chat-agent/env.local
+   cp .env.example ./examples/basic-agent/env.local
    ```
 
    Edit `.env.local` in this directory and add your credentials:
@@ -36,7 +36,7 @@ The architecture uses a **provider-agnostic AI interface** (`IAIClient`), allowi
 3. **Start the development server**
 
    ```bash
-   yarn workspace @examples/chat-agent dev
+   yarn workspace @examples/basic-agent dev
    ```
 
 4. **Open your browser**
@@ -84,7 +84,7 @@ Starts a local dev server with hot module reloading. Open `http://localhost:5173
 Or, run specifically for this example:
 
 ```bash
-yarn workspace @examples/chat-agent dev
+yarn workspace @examples/basic-agent dev
 ```
 
 ### Type Checking

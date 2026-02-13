@@ -144,4 +144,4 @@ const result = await agent.chat("Where is the nearest coffee shop?");
 - These tools require a valid Wayfinder SDK instance (from `@core/wayfinder`)
 - The tools are async and should be handled within an agent loop
 - Each tool is standalone and can be used independently
-- Tools maintain compatibility with the chat-agent example pattern
+- Tools maintain compatibility with the basic-agent example pattern

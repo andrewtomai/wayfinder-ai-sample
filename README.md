@@ -30,19 +30,19 @@ See each example's README for guidance on architectural improvements and extensi
 
 This repository contains multiple example applications. Choose the one that matches your use case:
 
-### **Chat Agent** (`examples/chat-agent/`)
+### **Basic Chat Agent** (`examples/basic-agent/`)
 
 A conversational interface for venue navigation. Users interact with an indoor map through natural language queries—asking about locations, amenities, and wayfinding—while an AI assistant processes requests and provides map-aware responses.
 
 **Best for:** Building chatbot-driven venue assistants, Natural Language based navigation
 
-👉 **[Get started with Chat Agent](examples/chat-agent/README.md)**
+👉 **[Get started with Basic Chat Agent](examples/basic-agent/README.md)**
 
-### **Kiosk Mode** (`examples/kiosk-mode/`)
+### **Kiosk Agent** (`examples/kiosk-agent/`)
 
-A full-screen kiosk interface for unattended display screens (airports, malls, etc.). Currently a placeholder—see Chat Agent for a working reference implementation.
+A full-screen kiosk interface for unattended display screens (airports, malls, etc.). Currently a placeholder—see Basic Chat Agent for a working reference implementation.
 
-👉 **[Kiosk Mode Documentation](examples/kiosk-mode/README.md)**
+👉 **[Kiosk Agent Documentation](examples/kiosk-agent/README.md)**
 
 ---
 
@@ -58,8 +58,8 @@ This repository is organized as a **Yarn workspaces monorepo** with shared packa
 | `@core/gemini` | `packages/gemini` | Google Gemini AI client implementation |
 | `@core/wayfinder` | `packages/wayfinder` | Atrius Wayfinder SDK wrapper with search |
 | `@core/logger` | `packages/logger` | Debug logging utility |
-| `@examples/chat-agent` | `examples/chat-agent` | Chat-based venue assistant example |
-| `@examples/kiosk-mode` | `examples/kiosk-mode` | Kiosk display example (placeholder) |
+| `@examples/basic-agent` | `examples/basic-agent` | Chat-based venue assistant example |
+| `@examples/kiosk-agent` | `examples/kiosk-agent` | Kiosk display example (placeholder) |
 
 ---
 
@@ -78,7 +78,7 @@ The application follows a clean separation of concerns:
 - **GeminiClient**: Implements IAIClient for Google Gemini; handles API specifics
 - **WayfinderSDK**: Wraps locusmaps-sdk for type-safe venue operations
 
-### **Example Layer** (`examples/chat-agent`)
+### **Example Layer** (`examples/basic-agent`)
 
 - **Tools & Prompts**: Example-specific tool definitions and system instructions
 - **ChatDrawer**: Main chat interface with message history
@@ -133,12 +133,12 @@ All commands are run from the repository root using Yarn workspaces.
 yarn dev
 ```
 
-Starts the default dev server with hot module reloading. By default, this runs `@examples/chat-agent`. Open `http://localhost:5173`.
+Starts the default dev server with hot module reloading. By default, this runs `@examples/basic-agent`. Open `http://localhost:5173`.
 
 To run a specific example:
 
 ```bash
-yarn workspace @examples/chat-agent dev
+yarn workspace @examples/basic-agent dev
 ```
 
 ### Other Commands

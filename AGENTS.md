@@ -5,11 +5,12 @@ This guide is for agentic coding tools and AI assistants working in this reposit
 ## Build, Lint, and Test Commands
 
 ### Available Scripts
+
 All commands are run with `yarn` (package manager: yarn@4.12.0):
 
 ```bash
-# Development server for an example (run from examples/chat-agent, etc.)
-cd examples/chat-agent && yarn dev
+# Development server for an example (run from examples/basic-agent, etc.)
+cd examples/basic-agent && yarn dev
 
 # Build for production (runs type check first)
 yarn build
@@ -44,6 +45,7 @@ yarn test --coverage
 - **JSX**: react-jsx
 
 **Key Compiler Options**:
+
 - `noUnusedLocals: true` - Fail on unused variables
 - `noUnusedParameters: true` - Fail on unused parameters
 - `noFallthroughCasesInSwitch: true` - Enforce switch case completion
@@ -55,10 +57,12 @@ Run `yarn check-types` to validate without building.
 ## Code Style Guidelines
 
 ### Imports
+
 - Use **absolute imports** from package names (e.g., `@wayfinder/search`, `@wayfinder/types`)
 - Import types using `type` keyword: `import type { MyType } from "..."`
 - Separate imports into blocks: external → relative types → relative code
 - Example:
+
   ```typescript
   import { GeminiClient } from "@gemini/gemini";
   import type { IAIClient } from "./IAIClient";
@@ -67,6 +71,7 @@ Run `yarn check-types` to validate without building.
   ```
 
 ### Formatting
+
 - **Prettier**: Not configured; follow ESLint rules
 - **Line Length**: Aim for readability (reasonable line breaks)
 - **Indentation**: 2 spaces (enforced by project setup)
@@ -74,6 +79,7 @@ Run `yarn check-types` to validate without building.
 - **Quotes**: Double quotes for strings (enforced by ESLint)
 
 ### Naming Conventions
+
 - **Classes**: PascalCase (`Agent`, `SearchEngine`, `GeminiClient`)
 - **Interfaces**: PascalCase with `I` prefix (`IAIClient`, `IConfig`)
 - **Functions/Methods**: camelCase (`executeTool`, `search`)
@@ -82,6 +88,7 @@ Run `yarn check-types` to validate without building.
 - **Type Aliases**: PascalCase (`ToolResult`, `Message`)
 
 ### TypeScript & Type Safety
+
 - Always include explicit return types on functions
 - Use `Record<string, unknown>` for flexible object types
 - Avoid `any` — use `unknown` with type guards instead
@@ -90,8 +97,10 @@ Run `yarn check-types` to validate without building.
 - Use `Static<typeof Schema>` pattern with Typebox for runtime validation
 
 ### Error Handling
+
 - **Catch blocks**: Always check `error instanceof Error` before accessing `.message`
 - **Pattern**:
+
   ```typescript
   try {
     const result = await tool.action(args);
@@ -102,15 +111,18 @@ Run `yarn check-types` to validate without building.
     return { name, result: null, error: errorMessage };
   }
   ```
+
 - Return structured error objects: `{ name, result: null, error: string }`
 - Log errors with context using `logger.error(msg, data)`
 
 ### Comments & Documentation
+
 - Add JSDoc comments for public methods and classes
 - Use block comments for sections: `// ============================================================================`
 - Inline comments for complex logic (keep minimal)
 - Document function purpose, parameters, and return types in JSDoc
 - Example:
+
   ```typescript
   /**
    * Execute a tool by name with given arguments
@@ -122,6 +134,7 @@ Run `yarn check-types` to validate without building.
   ```
 
 ### File Organization
+
 - Section comments divide logical areas with `// ====`
 - Group related methods together
 - Private methods below public ones
@@ -130,10 +143,12 @@ Run `yarn check-types` to validate without building.
 ## Testing Guidelines
 
 ### Test Framework
+
 - **Framework**: Vitest (configured in vite.config.ts)
 - **Pattern**: Standard describe/it/expect syntax (similar to Jest)
 
 ### Running Tests
+
 ```bash
 # Run single file
 yarn test packages/wayfinder/search/SearchEngine.test.ts
@@ -149,11 +164,13 @@ yarn test --coverage
 ```
 
 ### Test Structure
+
 - Use `describe()` for grouping related tests
 - Use `beforeEach()` for test setup and mocks
 - Use `expect()` for assertions
 - Test naming: `should [expected behavior]`
 - Example:
+
   ```typescript
   describe("SearchEngine", () => {
     let searchEngine: SearchEngine;
@@ -173,19 +190,23 @@ yarn test --coverage
 The repository is organized as a monorepo with two main sections:
 
 **Packages** (`packages/`) - Core modules used across examples:
+
 - `agent/` - AI agent orchestration and loop logic
 - `gemini/` - Gemini API client integration
 - `wayfinder/` - Wayfinder venue API client with search capabilities
 - `logger/` - Logging utility for debugging
 
 **Examples** (`examples/`) - Standalone applications demonstrating specific implementations:
-- `chat-agent/` - React-based chat interface that uses agent packages
-- `kiosk-mode/` - Example kiosk-mode implementation
+
+- `basic-agent/` - React-based chat interface that uses agent packages
+- `kiosk-agent/` - Example kiosk-agent implementation
 
 ## Key Patterns
 
 ### Agent Loop Pattern
+
 The Agent class implements a thinking loop:
+
 1. User sends message → added to history
 2. Call AI client with tools available
 3. If tool calls returned → execute tools, add results to history, loop
@@ -193,6 +214,7 @@ The Agent class implements a thinking loop:
 5. Return final result after MAX_ITERATIONS or text response
 
 ### Tool Interface
+
 ```typescript
 interface AgentTool {
   name: string;
@@ -203,7 +225,9 @@ interface AgentTool {
 ```
 
 ### Error Returns
+
 Always return structured results with error field:
+
 ```typescript
 { name: string, result: unknown | null, error?: string }
 ```
@@ -211,6 +235,7 @@ Always return structured results with error field:
 ## Logging
 
 Use the provided logger utility (packages/logger/index.ts):
+
 ```typescript
 import logger from "@logger";
 

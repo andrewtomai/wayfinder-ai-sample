@@ -1,5 +1,5 @@
 {
-  "name": "@examples/basic-agent",
+  "name": "@examples/kiosk-agent",
   "version": "0.0.0",
   "private": true,
   "type": "module",

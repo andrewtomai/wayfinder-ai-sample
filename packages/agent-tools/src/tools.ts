@@ -89,7 +89,7 @@ export const getSecurityWaitTimes: AgentTool = {
 // ============================================================================
 
 /**
- * Array of all shared chat-agent tools.
+ * Array of all shared basic-agent tools.
  * Use this to provide all tools to the agent at once.
  */
 export const allTools: AgentTool[] = [

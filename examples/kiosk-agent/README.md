@@ -1,4 +1,4 @@
-# Kiosk Mode Example
+# Kiosk Agent Example
 
 > **Status: Placeholder** — This example is not yet implemented.
 
@@ -14,4 +14,4 @@ unattended display screens (e.g., airport terminals, mall directories).
 
 ## Getting Started
 
-This example is a placeholder. See `../chat-agent/` for a working example.
+This example is a placeholder. See `../basic-agent/` for a working example.
