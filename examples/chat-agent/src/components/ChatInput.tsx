@@ -70,17 +70,16 @@ export function ChatInput({
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          disabled={disabled}
           rows={1}
           aria-label="Chat message input"
         />
         <button
-           className={styles.chatSendButton}
-           onClick={handleSubmit}
-           disabled={!input.trim() || disabled}
-           aria-label="Send message"
-           type="button"
-         >
+          className={styles.chatSendButton}
+          onClick={handleSubmit}
+          disabled={!input.trim() || disabled}
+          aria-label="Send message"
+          type="button"
+        >
           <SendIcon />
         </button>
       </div>
@@ -93,7 +92,10 @@ interface ChatSuggestionsProps {
   onSelect: (suggestion: string) => void;
 }
 
-export function ChatSuggestions({ suggestions, onSelect }: ChatSuggestionsProps) {
+export function ChatSuggestions({
+  suggestions,
+  onSelect,
+}: ChatSuggestionsProps) {
   if (suggestions.length === 0) return null;
 
   return (
