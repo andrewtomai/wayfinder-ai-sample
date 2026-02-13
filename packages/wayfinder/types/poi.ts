@@ -29,6 +29,7 @@ const POIPosition = Type.Object({
 export const SecurityWaitTimeResult = Type.Object({
   poiId: Type.Number(),
   name: Type.String(),
+  nearbyLandmark: Type.Optional(Type.String()),
   category: Type.String(),
   queueTime: Type.Optional(Type.Number()),
   isTemporarilyClosed: Type.Optional(Type.Boolean()),

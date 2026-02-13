@@ -20,7 +20,15 @@ import styles from "./ChatDrawer.module.css";
 // Initialize the agent once with full configuration
 const agentConfig: AgentConfig = {
   client: new GeminiClient(),
-  tools: [search, getPOIDetails, getBuildingsAndLevels, getCategories, showPOI, showDirections, getSecurityWaitTimes],
+  tools: [
+    search,
+    getPOIDetails,
+    getBuildingsAndLevels,
+    getCategories,
+    showPOI,
+    showDirections,
+    getSecurityWaitTimes,
+  ],
   buildSystemInstruction,
   maxIterations: MAX_ITERATIONS,
 };
@@ -116,6 +124,7 @@ export function ChatDrawer() {
             <ChatSuggestions
               suggestions={[
                 "Where can I get a snack?",
+                "Show me current security wait times",
                 "Get directions to my gate",
                 "Find coffee shops nearby",
               ]}

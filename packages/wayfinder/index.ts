@@ -115,6 +115,7 @@ class AtriusMap {
         poiId: Number(poi.poiId),
         name: poi.name,
         category: poi.category,
+        nearbyLandmark: poi.nearbyLandmark,
         ...(hasRealTimeData
           ? {
               queueTime: securityData.queueTime,
