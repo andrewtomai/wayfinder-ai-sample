@@ -1,12 +1,6 @@
 import ReactMarkdown from "react-markdown";
+import type { Message } from "./types";
 import styles from "./ChatMessage.module.css";
-
-export interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-}
 
 interface ChatMessageProps {
   message: Message;
@@ -23,18 +17,11 @@ export function ChatMessage({ message }: ChatMessageProps) {
         )}
       </div>
       <span className={styles.chatMessageTime}>
-        {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        {message.timestamp.toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
       </span>
-    </div>
-  );
-}
-
-export function TypingIndicator() {
-  return (
-    <div className={styles.typingIndicator}>
-      <span></span>
-      <span></span>
-      <span></span>
     </div>
   );
 }

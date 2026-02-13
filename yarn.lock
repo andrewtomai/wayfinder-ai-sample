@@ -257,6 +257,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@core/chat-ui@workspace:*, @core/chat-ui@workspace:packages/chat-ui":
+  version: 0.0.0-use.local
+  resolution: "@core/chat-ui@workspace:packages/chat-ui"
+  dependencies:
+    react-markdown: "npm:^10.1.0"
+  peerDependencies:
+    react: ^19.2.0
+  languageName: unknown
+  linkType: soft
+
 "@core/gemini@workspace:*, @core/gemini@workspace:packages/gemini":
   version: 0.0.0-use.local
   resolution: "@core/gemini@workspace:packages/gemini"
@@ -456,6 +466,7 @@ __metadata:
   resolution: "@examples/chat-agent@workspace:examples/chat-agent"
   dependencies:
     "@core/agent": "workspace:*"
+    "@core/chat-ui": "workspace:*"
     "@core/gemini": "workspace:*"
     "@core/logger": "workspace:*"
     "@core/wayfinder": "workspace:*"

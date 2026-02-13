@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { ChatMessage, TypingIndicator } from "./ChatMessage";
-import { ChatInput, ChatSuggestions } from "./ChatInput";
-import type { Message } from "./ChatMessage";
+import {
+  ChatMessage,
+  TypingIndicator,
+  ChatInput,
+  ChatSuggestions,
+  type Message,
+} from "@core/chat-ui";
 import { Agent } from "@core/agent";
 import type { AgentConfig } from "@core/agent";
 import { GeminiClient } from "@core/gemini";
