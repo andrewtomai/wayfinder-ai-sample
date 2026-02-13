@@ -13,6 +13,7 @@ import {
   getCategories,
   showPOI,
   showDirections,
+  getSecurityWaitTimes,
 } from "./tools";
 import type { Static } from "typebox";
 import { SearchOptions } from "@core/wayfinder";
@@ -39,6 +40,7 @@ describe("Agent Tools", () => {
       getCategories: vi.fn(),
       showPOI: vi.fn(),
       showDirections: vi.fn(),
+      getSecurityWaitTimes: vi.fn(),
     };
 
     // Mock getMapInstance to return our mock
@@ -409,6 +411,52 @@ describe("Agent Tools", () => {
     });
   });
 
+  describe("GetSecurityWaitTimes Tool", () => {
+    it("should have correct name and description", () => {
+      expect(getSecurityWaitTimes.name).toBe("getSecurityWaitTimes");
+      expect(getSecurityWaitTimes.description).toBeDefined();
+      expect(getSecurityWaitTimes.description.length).toBeGreaterThan(0);
+    });
+
+    it("should have parametersJsonSchema as empty object", () => {
+      expect(getSecurityWaitTimes.parametersJsonSchema).toBeDefined();
+    });
+
+    it("should have responseJsonSchema", () => {
+      expect(getSecurityWaitTimes.responseJsonSchema).toBeDefined();
+    });
+
+    it("should call map.getSecurityWaitTimes", async () => {
+      const mockResults = [
+        { poiId: 1, name: "Security Checkpoint A", category: "security", queueTime: 15, isTemporarilyClosed: false, lastUpdated: 1700000000 },
+      ];
+      mockMapInstance.getSecurityWaitTimes.mockResolvedValue(mockResults);
+
+      const result = await getSecurityWaitTimes.action({});
+
+      expect(mockMapInstance.getSecurityWaitTimes).toHaveBeenCalled();
+      expect(result).toEqual(mockResults);
+    });
+
+    it("should return empty array when no security checkpoints", async () => {
+      mockMapInstance.getSecurityWaitTimes.mockResolvedValue([]);
+
+      const result = await getSecurityWaitTimes.action({});
+
+      expect(result).toEqual([]);
+    });
+
+    it("should handle errors", async () => {
+      mockMapInstance.getSecurityWaitTimes.mockRejectedValue(
+        new Error("Failed to get security wait times"),
+      );
+
+      await expect(getSecurityWaitTimes.action({})).rejects.toThrow(
+        "Failed to get security wait times",
+      );
+    });
+  });
+
   describe("Tool Schema Validation", () => {
     it("all tools should have name and description", () => {
       const tools = [
@@ -418,6 +466,7 @@ describe("Agent Tools", () => {
         getCategories,
         showPOI,
         showDirections,
+        getSecurityWaitTimes,
       ];
 
       tools.forEach((tool) => {
@@ -439,6 +488,7 @@ describe("Agent Tools", () => {
         getCategories,
         showPOI,
         showDirections,
+        getSecurityWaitTimes,
       ];
 
       tools.forEach((tool) => {
@@ -455,6 +505,7 @@ describe("Agent Tools", () => {
         getCategories,
         showPOI,
         showDirections,
+        getSecurityWaitTimes,
       ];
 
       tools.forEach((tool) => {

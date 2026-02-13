@@ -26,6 +26,15 @@ const POIPosition = Type.Object({
   floorOrdinal: Type.Number(),
 });
 
+export const SecurityWaitTimeResult = Type.Object({
+  poiId: Type.Number(),
+  name: Type.String(),
+  category: Type.String(),
+  queueTime: Type.Optional(Type.Number()),
+  isTemporarilyClosed: Type.Optional(Type.Boolean()),
+  lastUpdated: Type.Optional(Type.Number()),
+});
+
 export const POI = Type.Object({
   poiId: Type.String(),
   name: Type.String(),

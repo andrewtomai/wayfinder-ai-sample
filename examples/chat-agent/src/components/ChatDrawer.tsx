@@ -12,6 +12,7 @@ import {
   getCategories,
   showPOI,
   showDirections,
+  getSecurityWaitTimes,
 } from "../tools";
 import { buildSystemInstruction, MAX_ITERATIONS } from "../prompts";
 import styles from "./ChatDrawer.module.css";
@@ -19,7 +20,7 @@ import styles from "./ChatDrawer.module.css";
 // Initialize the agent once with full configuration
 const agentConfig: AgentConfig = {
   client: new GeminiClient(),
-  tools: [search, getPOIDetails, getBuildingsAndLevels, getCategories, showPOI, showDirections],
+  tools: [search, getPOIDetails, getBuildingsAndLevels, getCategories, showPOI, showDirections, getSecurityWaitTimes],
   buildSystemInstruction,
   maxIterations: MAX_ITERATIONS,
 };

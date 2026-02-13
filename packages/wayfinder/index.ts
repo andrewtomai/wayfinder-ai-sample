@@ -3,11 +3,12 @@
 import AtriusMaps from "locusmaps-sdk";
 import type { MapInstance } from "locusmaps-sdk";
 import type { Static, TSchema } from "typebox";
+import { Type } from "typebox";
 import { Value } from "typebox/value";
 import logger from "@core/logger";
 import { Config } from "./types/config";
 import { Directions, MultipointDirections } from "./types/directions";
-import { POI } from "./types/poi";
+import { POI, SecurityWaitTimeResult } from "./types/poi";
 import { BuildingsAndLevels } from "./types/venue";
 import {
   SearchEngine,
@@ -15,7 +16,7 @@ import {
   SearchOptions,
 } from "./search/SearchEngine";
 
-const outputValidation = (type: TSchema, data: unknown) => {
+const parse = <T extends TSchema>(type: T, data: unknown): Static<T> => {
   try {
     return Value.Parse(type, data);
   } catch (e) {
@@ -69,25 +70,25 @@ class AtriusMap {
 
   async getPOIDetails(poiId: number) {
     const result = await this.map.getPOIDetails(poiId);
-    return outputValidation(POI, result);
+    return parse(POI, result);
   }
 
   async showPOI(poiId: number) {
     const data = await this.map.getPOIDetails(poiId);
     await this.map.showPOI(poiId);
-    return outputValidation(POI, data);
+    return parse(POI, data);
   }
 
   async showDirections(waypoints: number[]) {
     const args = waypoints.map((poiId) => ({ poiId }));
     const result = await this.map.getDirectionsMultiple(args);
     await this.map.showNavigationMultiple(args);
-    return outputValidation(MultipointDirections, result);
+    return parse(MultipointDirections, result);
   }
 
   async getStructures() {
     const result = await this.map.getStructures();
-    return outputValidation(BuildingsAndLevels, result);
+    return parse(BuildingsAndLevels, result);
   }
 
   async search(options: Static<typeof SearchOptions>) {
@@ -96,6 +97,35 @@ class AtriusMap {
 
   async getCategories() {
     return this.searchEngine.getCategories();
+  }
+
+  async getSecurityWaitTimes() {
+    const allPOIs = parse(
+      Type.Array(POI),
+      Object.values(await this.map.getAllPOIs()),
+    );
+    const securityPOIs = allPOIs.filter((poi) =>
+      poi.category.startsWith("security"),
+    );
+
+    const results = securityPOIs.map((poi) => {
+      const securityData = poi.dynamicData?.security;
+      const hasRealTimeData = securityData && securityData.timeIsReal;
+      return {
+        poiId: Number(poi.poiId),
+        name: poi.name,
+        category: poi.category,
+        ...(hasRealTimeData
+          ? {
+              queueTime: securityData.queueTime,
+              isTemporarilyClosed: securityData.isTemporarilyClosed,
+              lastUpdated: securityData.lastUpdated,
+            }
+          : {}),
+      };
+    });
+
+    return parse(Type.Array(SecurityWaitTimeResult), results);
   }
 }
 
@@ -117,5 +147,5 @@ export {
 };
 export { SearchOptions };
 export { Config } from "./types/config";
-export { POI } from "./types/poi";
+export { POI, SecurityWaitTimeResult } from "./types/poi";
 export { BuildingsAndLevels } from "./types/venue";

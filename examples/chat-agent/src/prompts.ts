@@ -67,7 +67,8 @@ Tools:
     getPOIDetails: Get full info for a specific POI.
     showPOI: Display a POI on the map.
     showDirections: Provide turn-by-turn navigation.
-    getBuildingsAndLevels: Explore venue structure.`;
+    getBuildingsAndLevels: Explore venue structure.
+    getSecurityWaitTimes: Get current wait times for all security checkpoints.`;
 
 /**
  * Maximum number of iterations the agent should run before stopping.

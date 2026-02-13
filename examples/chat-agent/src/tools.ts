@@ -6,6 +6,7 @@ import getMapInstance, {
   POI,
   BuildingsAndLevels,
   MultipointDirections,
+  SecurityWaitTimeResult,
 } from "@core/wayfinder";
 import type { AgentTool } from "@core/agent";
 
@@ -95,5 +96,17 @@ export const showDirections: AgentTool = {
     const map = await getMapInstance();
     const { waypoints } = args as Static<typeof ShowDirectionsInput>;
     return map.showDirections(waypoints);
+  },
+};
+
+export const getSecurityWaitTimes: AgentTool = {
+  name: "getSecurityWaitTimes",
+  description:
+    "Get current wait times for all security checkpoints in the venue. Returns checkpoint name, ID, category, and real-time queue data (wait time in minutes, temporarily closed status, last updated timestamp). Some checkpoints may not have real-time data available. No parameters required.",
+  parametersJsonSchema: Type.Object({}),
+  responseJsonSchema: Type.Array(SecurityWaitTimeResult),
+  action: async () => {
+    const map = await getMapInstance();
+    return map.getSecurityWaitTimes();
   },
 };
