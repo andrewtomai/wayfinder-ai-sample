@@ -131,10 +131,11 @@ class AtriusMap {
 }
 
 // Export a function that returns the singleton instance
-const getMapInstance = () =>
+const getMapInstance = (config: Partial<Static<typeof Config>> = {}) =>
   AtriusMap.getInstance("#map", {
     venueId: import.meta.env.VITE_ATRIUS_VENUE_ID,
     accountId: import.meta.env.VITE_ATRIUS_ACCOUNT_ID,
+    ...config,
   });
 
 export default getMapInstance;
