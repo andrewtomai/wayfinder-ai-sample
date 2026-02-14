@@ -6,10 +6,28 @@
   overflow: hidden;
 }
 
+/* Map Container - 80% width on desktop, but can shrink to accommodate chat drawer min-width */
+.map-container {
+  flex: 1 1 80%;
+  min-width: 0;
+  height: 100%;
+  position: relative;
+}
+
+#map {
+  height: 100%;
+  width: 100%;
+}
 
 /* Stack vertically on narrow screens (below 800px) */
 @media (max-width: 800px) {
   .app-container {
     flex-direction: column;
+  }
+
+  .map-container {
+    flex: 1 1 67%;
+    height: auto;
+    min-height: 0;
   }
 }
