@@ -1,5 +1,5 @@
 {
-  "name": "@examples/kiosk-agent",
+  "name": "@examples/location-aware-agent",
   "version": "0.0.0",
   "private": true,
   "type": "module",

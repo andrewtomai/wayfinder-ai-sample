@@ -674,9 +674,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@examples/kiosk-agent@workspace:examples/kiosk-agent":
+"@examples/location-aware-agent@workspace:examples/location-aware-agent":
   version: 0.0.0-use.local
-  resolution: "@examples/kiosk-agent@workspace:examples/kiosk-agent"
+  resolution: "@examples/location-aware-agent@workspace:examples/location-aware-agent"
   dependencies:
     "@core/agent": "workspace:*"
     "@core/agent-tools": "workspace:*"

@@ -106,7 +106,8 @@ Run `yarn check-types` to validate without building.
     const result = await tool.action(args);
     return { name, result };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
     logger.error(`Tool failed: ${name}`, { error: errorMessage });
     return { name, result: null, error: errorMessage };
   }
@@ -199,7 +200,7 @@ The repository is organized as a monorepo with two main sections:
 **Examples** (`examples/`) - Standalone applications demonstrating specific implementations:
 
 - `basic-agent/` - React-based chat interface that uses agent packages
-- `kiosk-agent/` - Example kiosk-agent implementation
+- `location-aware-agent/` - Example location-aware-agent implementation
 
 ## Key Patterns
 
@@ -239,10 +240,10 @@ Use the provided logger utility (packages/logger/index.ts):
 ```typescript
 import logger from "@logger";
 
-logger.debug(message, data);   // Indented debug output
-logger.info(message, data);    // Info output
-logger.warn(message, data);    // Warning output
-logger.error(message, data);   // Error output with red styling
+logger.debug(message, data); // Indented debug output
+logger.info(message, data); // Info output
+logger.warn(message, data); // Warning output
+logger.error(message, data); // Error output with red styling
 ```
 
 Logger is browser-console only with colored output. Use for debugging agent flow.

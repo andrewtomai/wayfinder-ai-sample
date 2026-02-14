@@ -2,7 +2,7 @@ import "./App.css";
 import getMapInstance, { getPinnedLocation } from "@core/wayfinder";
 import { ChatDrawer } from "./components/ChatDrawer";
 
-// Kiosk-agent requires a pinned location — crash at startup if not configured
+// location-aware-agent requires a pinned location — crash at startup if not configured
 const pinnedLocation = getPinnedLocation();
 if (!pinnedLocation) {
   throw new Error(

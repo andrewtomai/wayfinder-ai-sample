@@ -38,11 +38,11 @@ A conversational interface for venue navigation. Users interact with an indoor m
 
 👉 **[Get started with Basic Chat Agent](examples/basic-agent/README.md)**
 
-### **Kiosk Agent** (`examples/kiosk-agent/`)
+### **Location Aware Agent (Kiosk)** (`examples/location-aware-agent/`)
 
 A full-screen kiosk interface for unattended display screens (airports, malls, etc.). Currently a placeholder—see Basic Chat Agent for a working reference implementation.
 
-👉 **[Kiosk Agent Documentation](examples/kiosk-agent/README.md)**
+👉 **[Location Aware Agent Documentation](examples/location-aware-agent/README.md)**
 
 ---
 
@@ -52,14 +52,14 @@ This repository is organized as a **Yarn workspaces monorepo** with shared packa
 
 ### Workspace Packages
 
-| Package | Scope | Description |
-|---------|-------|-------------|
-| `@core/agent` | `packages/agent` | AI agent framework with tool execution loop |
-| `@core/gemini` | `packages/gemini` | Google Gemini AI client implementation |
-| `@core/wayfinder` | `packages/wayfinder` | Atrius Wayfinder SDK wrapper with search |
-| `@core/logger` | `packages/logger` | Debug logging utility |
-| `@examples/basic-agent` | `examples/basic-agent` | Chat-based venue assistant example |
-| `@examples/kiosk-agent` | `examples/kiosk-agent` | Kiosk display example (placeholder) |
+| Package                          | Scope                           | Description                                 |
+| -------------------------------- | ------------------------------- | ------------------------------------------- |
+| `@core/agent`                    | `packages/agent`                | AI agent framework with tool execution loop |
+| `@core/gemini`                   | `packages/gemini`               | Google Gemini AI client implementation      |
+| `@core/wayfinder`                | `packages/wayfinder`            | Atrius Wayfinder SDK wrapper with search    |
+| `@core/logger`                   | `packages/logger`               | Debug logging utility                       |
+| `@examples/basic-agent`          | `examples/basic-agent`          | Chat-based venue assistant example          |
+| `@examples/location-aware-agent` | `examples/location-aware-agent` | Kiosk display example (placeholder)         |
 
 ---
 

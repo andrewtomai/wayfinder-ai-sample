@@ -1,4 +1,4 @@
-# Kiosk Agent Example
+# Location Aware Agent Example
 
 A location aware chat interface for venue navigation, designed for unattended kiosk deployments (e.g., terminal directories, mall information stands, lobby wayfinding stations).
 
@@ -28,7 +28,7 @@ The architecture uses the same **provider-agnostic AI interface** (`IAIClient`) 
 2. **Set up environment variables**
 
    ```bash
-   cd examples/kiosk-agent
+   cd examples/location-aware-agent
    cp .env.example .env.local
    ```
 
@@ -44,7 +44,7 @@ The architecture uses the same **provider-agnostic AI interface** (`IAIClient`) 
 3. **Start the development server**
 
    ```bash
-   yarn workspace @examples/kiosk-agent dev
+   yarn workspace @examples/location-aware-agent dev
    ```
 
 4. **Open your browser**
@@ -102,7 +102,7 @@ Starts a local dev server with hot module reloading. Open `http://localhost:5173
 Or, run specifically for this example:
 
 ```bash
-yarn workspace @examples/kiosk-agent dev
+yarn workspace @examples/location-aware-agent dev
 ```
 
 ### Type Checking
@@ -243,7 +243,7 @@ Display in ChatMessage (rendered as markdown)
 
 ## Differences from Basic Agent
 
-| Aspect                   | Basic Agent                                | Kiosk Agent                                                  |
+| Aspect                   | Basic Agent                                | Location Aware Agent                                         |
 | ------------------------ | ------------------------------------------ | ------------------------------------------------------------ |
 | **Map**                  | Visible map panel (~80% of screen)         | Headless — no visible map                                    |
 | **Layout**               | Side-by-side: map + chat drawer            | Full-screen chat only                                        |
