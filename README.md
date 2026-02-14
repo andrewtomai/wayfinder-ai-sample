@@ -40,7 +40,7 @@ A conversational interface for venue navigation. Users interact with an indoor m
 
 ### **Location Aware Agent (Kiosk)** (`examples/location-aware-agent/`)
 
-A full-screen kiosk interface for unattended display screens (airports, malls, etc.). Currently a placeholder—see Basic Chat Agent for a working reference implementation.
+A full-screen location aware interface for unattended display screens (airports, malls, etc.).
 
 👉 **[Location Aware Agent Documentation](examples/location-aware-agent/README.md)**
 

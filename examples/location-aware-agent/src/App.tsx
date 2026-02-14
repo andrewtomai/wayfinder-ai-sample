@@ -6,7 +6,7 @@ import { ChatDrawer } from "./components/ChatDrawer";
 const pinnedLocation = getPinnedLocation();
 if (!pinnedLocation) {
   throw new Error(
-    "Kiosk mode requires a pinned location. Set VITE_PINNED_LATITUDE, VITE_PINNED_LONGITUDE, and VITE_PINNED_FLOOR_ID environment variables.",
+    "Location Aware mode requires a pinned location. Set VITE_PINNED_LATITUDE, VITE_PINNED_LONGITUDE, and VITE_PINNED_FLOOR_ID environment variables.",
   );
 }
 
