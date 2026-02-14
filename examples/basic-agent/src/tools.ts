@@ -35,6 +35,6 @@ export const showDirections: AgentTool = {
   action: async (args) => {
     const map = await getMapInstance();
     const { waypoints } = args as Static<typeof ShowDirectionsInput>;
-    return map.showDirections(waypoints);
+    return map.showDirections(waypoints.map((id) => ({ poiId: id })));
   },
 };

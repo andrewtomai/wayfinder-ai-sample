@@ -12,6 +12,8 @@
  * behavior in venue navigation contexts.
  */
 
+import { getPinnedLocation } from "@core/wayfinder";
+
 /**
  * Base system instruction for the AI agent.
  *
@@ -33,8 +35,8 @@ Core Principles:
     Concise & Friendly: Use short paragraphs, emojis, and a warm, upbeat tone.
 
 Operational Protocols:
-    Search First: Always call search() to get a valid POI ID before using showPOI or showDirections. Never assume user text is an ID.
-    Directions: Confirm both Origin and Destination IDs via search before calling showDirections(). Present steps in a numbered list with estimated walking times.
+    Search First: Always call search() or searchNearby() to get a valid POI ID before using showPOI or showDirections. Never assume user text is an ID.
+    Directions: Directions always start from the user's current location. Only provide destination POI IDs — do NOT specify an origin. Present steps in a numbered list with estimated walking times.
 
 Search Pattern Protocol
   When a user mentions a location or need, do not search their raw text. Follow this 3-step loop:
@@ -57,16 +59,32 @@ Scope & Limits:
     Out-of-Scope: Flight status, baggage claims, airline policies.
     Hand-off: If out-of-scope, provide directions to the nearest relevant service desk (e.g., "I can't check flight times, but the Information Desk on Level 2 is right nearby to help!").
 
-Contextual Proactivity: Don't wait for users to be specific. If a query is vague, immediately ask:
-    "Are you before or after security?"
-    "What is the nearest gate or shop you see right now?"`;
+Contextual Proactivity: Don't wait for users to be specific. If a query is vague, use searchNearby to find options close to the user first.`;
+
+/**
+ * Build location context string from the pinned location.
+ */
+function buildLocationContext(): string {
+  const pinned = getPinnedLocation();
+  if (!pinned) {
+    return "";
+  }
+  return `
+
+Location Awareness:
+    You are located at "${pinned.pinTitle}" on floor "${pinned.floorId}".
+    The user is standing at this kiosk. All directions start from here automatically.
+    For "what's nearby?" or proximity queries, use the searchNearby tool — it automatically searches around the user's current location.
+    You do NOT need to ask the user where they are. You already know.`;
+}
 
 const TOOLS_INSTRUCTIONS = `
 Tools:
-    search: Find POIs.
+    search: Find POIs across the entire venue.
+    searchNearby: Find POIs near the user's current location. Use for "what's nearby?", "what's close?", or proximity queries. Automatically scoped to the kiosk's position and floor.
     getPOIDetails: Get full info for a specific POI.
     showPOI: Display a POI on the map.
-    showDirections: Provide turn-by-turn navigation.
+    showDirections: Provide turn-by-turn navigation from the user's current location. Only specify destination POI IDs.
     getBuildingsAndLevels: Explore venue structure.
     getSecurityWaitTimes: Get current wait times for all security checkpoints.`;
 
@@ -89,10 +107,13 @@ export const MAX_ITERATIONS = 10;
  * @returns {string} The system instruction with optional iteration guidance
  */
 export function buildSystemInstruction(iteration: number): string {
+  const locationContext = buildLocationContext();
+
   if (iteration >= MAX_ITERATIONS) {
     // Iteration 10: Hard stop - no tools available
     return (
       BASE_SYSTEM_INSTRUCTION +
+      locationContext +
       `\n\nYou have no iterations left. Provide your final answer based on information already gathered, or ask clarifying questions to help refine future searches.`
     );
   }
@@ -101,9 +122,10 @@ export function buildSystemInstruction(iteration: number): string {
     // Iterations 8-9: Warn to prioritize
     return (
       BASE_SYSTEM_INSTRUCTION +
+      locationContext +
       TOOLS_INSTRUCTIONS +
       `\n\nNote: You have ${MAX_ITERATIONS - iteration} iteration(s) remaining. Prioritize gathering the most critical information and prepare to wrap up soon.`
     );
   }
-  return BASE_SYSTEM_INSTRUCTION + TOOLS_INSTRUCTIONS;
+  return BASE_SYSTEM_INSTRUCTION + locationContext + TOOLS_INSTRUCTIONS;
 }

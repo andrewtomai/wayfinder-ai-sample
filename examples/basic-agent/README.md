@@ -25,7 +25,8 @@ The architecture uses a **provider-agnostic AI interface** (`IAIClient`), allowi
 2. **Set up environment variables**
 
    ```bash
-   cp .env.example ./examples/basic-agent/env.local
+   cd examples/basic-agent
+   cp .env.example .env.local
    ```
 
    Edit `.env.local` in this directory and add your credentials:

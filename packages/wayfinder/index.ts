@@ -7,7 +7,7 @@ import { Type } from "typebox";
 import { Value } from "typebox/value";
 import logger from "@core/logger";
 import { Config } from "./types/config";
-import { Directions, MultipointDirections } from "./types/directions";
+import { Directions, MultipointDirections, Stop } from "./types/directions";
 import { POI, SecurityWaitTimeResult } from "./types/poi";
 import { BuildingsAndLevels } from "./types/venue";
 import {
@@ -15,6 +15,7 @@ import {
   SearchResult,
   SearchOptions,
 } from "./search/SearchEngine";
+import { getPinnedLocation } from "./pinnedLocation";
 
 const parse = <T extends TSchema>(type: T, data: unknown): Static<T> => {
   try {
@@ -79,10 +80,9 @@ class AtriusMap {
     return parse(POI, data);
   }
 
-  async showDirections(waypoints: number[]) {
-    const args = waypoints.map((poiId) => ({ poiId }));
-    const result = await this.map.getDirectionsMultiple(args);
-    await this.map.showNavigationMultiple(args);
+  async showDirections(waypoints: Static<typeof Stop>[]) {
+    const result = await this.map.getDirectionsMultiple(waypoints);
+    await this.map.showNavigationMultiple(waypoints);
     return parse(MultipointDirections, result);
   }
 
@@ -131,12 +131,15 @@ class AtriusMap {
 }
 
 // Export a function that returns the singleton instance
-const getMapInstance = (config: Partial<Static<typeof Config>> = {}) =>
-  AtriusMap.getInstance("#map", {
+const getMapInstance = (config: Partial<Static<typeof Config>> = {}) => {
+  const pinnedLocation = getPinnedLocation();
+  return AtriusMap.getInstance("#map", {
     venueId: import.meta.env.VITE_ATRIUS_VENUE_ID,
     accountId: import.meta.env.VITE_ATRIUS_ACCOUNT_ID,
+    pinnedLocation: pinnedLocation ?? undefined,
     ...config,
   });
+};
 
 export default getMapInstance;
 
@@ -151,3 +154,5 @@ export { SearchOptions };
 export { Config } from "./types/config";
 export { POI, SecurityWaitTimeResult } from "./types/poi";
 export { BuildingsAndLevels } from "./types/venue";
+export { getPinnedLocation } from "./pinnedLocation";
+export type { PinnedLocation } from "./pinnedLocation";

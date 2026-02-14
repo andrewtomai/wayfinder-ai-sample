@@ -3,6 +3,14 @@ declare module "locusmaps-sdk" {
   interface MapConfig {
     accountId: string;
     venueId: string;
+    pinnedLocation?: {
+      pinTitle?: string;
+      lat: number;
+      lng: number;
+      floorId?: string;
+      ordinal?: string;
+      structureId?: string;
+    };
   }
 
   export interface MapInstance {

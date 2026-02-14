@@ -1,6 +1,14 @@
 import "./App.css";
-import getMapInstance from "@core/wayfinder";
+import getMapInstance, { getPinnedLocation } from "@core/wayfinder";
 import { ChatDrawer } from "./components/ChatDrawer";
+
+// Kiosk-agent requires a pinned location — crash at startup if not configured
+const pinnedLocation = getPinnedLocation();
+if (!pinnedLocation) {
+  throw new Error(
+    "Kiosk mode requires a pinned location. Set VITE_PINNED_LATITUDE, VITE_PINNED_LONGITUDE, and VITE_PINNED_FLOOR_ID environment variables.",
+  );
+}
 
 function App() {
   return (

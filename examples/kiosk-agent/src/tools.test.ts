@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { search, showDirections } from "./tools";
+import { search, showDirections, searchNearby } from "./tools";
 import type { Static } from "typebox";
 import { SearchOptions } from "@core/wayfinder";
 
@@ -16,6 +16,12 @@ vi.mock("@core/wayfinder", async (importOriginal) => {
   return {
     ...actual,
     default: vi.fn(),
+    getPinnedLocation: vi.fn(() => ({
+      lat: 40.7128,
+      lng: -74.006,
+      floorId: "floor-1",
+      pinTitle: "Main Entrance",
+    })),
   };
 });
 
@@ -116,7 +122,7 @@ describe("Agent Tools", () => {
       expect(showDirections.parametersJsonSchema).toBeDefined();
     });
 
-    it("should call map.showDirections with waypoints", async () => {
+    it("should call map.showDirections with pinned origin prepended", async () => {
       const mockDirections = {
         distance: 500,
         duration: 5,
@@ -124,19 +130,25 @@ describe("Agent Tools", () => {
       };
       mockMapInstance.showDirections.mockResolvedValue(mockDirections);
 
-      const result = await showDirections.action({ waypoints: [100, 200] });
+      const result = await showDirections.action({ waypoints: [200] });
 
-      expect(mockMapInstance.showDirections).toHaveBeenCalledWith([100, 200]);
+      expect(mockMapInstance.showDirections).toHaveBeenCalledWith([
+        { lat: 40.7128, lng: -74.006, floorId: "floor-1" },
+        200,
+      ]);
       expect(result).toEqual(mockDirections);
     });
 
-    it("should support multi-stop routes", async () => {
+    it("should support multi-stop routes with pinned origin", async () => {
       mockMapInstance.showDirections.mockResolvedValue({});
 
       await showDirections.action({ waypoints: [100, 200, 300] });
 
       expect(mockMapInstance.showDirections).toHaveBeenCalledWith([
-        100, 200, 300,
+        { lat: 40.7128, lng: -74.006, floorId: "floor-1" },
+        100,
+        200,
+        300,
       ]);
     });
 
@@ -162,7 +174,7 @@ describe("Agent Tools", () => {
       mockMapInstance.showDirections.mockResolvedValue(directions);
 
       const result = (await showDirections.action({
-        waypoints: [1, 2],
+        waypoints: [2],
       })) as Record<string, unknown>;
 
       expect(result).toHaveProperty("distance");
@@ -177,7 +189,7 @@ describe("Agent Tools", () => {
       );
 
       await expect(
-        showDirections.action({ waypoints: [1, 2] }),
+        showDirections.action({ waypoints: [1] }),
       ).rejects.toThrow("Route calculation failed");
     });
 
@@ -187,14 +199,14 @@ describe("Agent Tools", () => {
       );
 
       await expect(
-        showDirections.action({ waypoints: [100, 200] }),
+        showDirections.action({ waypoints: [100] }),
       ).rejects.toThrow("No route found");
     });
   });
 
   describe("Tool Schema Validation", () => {
     it("all tools should have name and description", () => {
-      const tools = [search, showDirections];
+      const tools = [search, showDirections, searchNearby];
 
       tools.forEach((tool) => {
         expect(tool.name).toBeDefined();
@@ -208,7 +220,7 @@ describe("Agent Tools", () => {
     });
 
     it("all tools should have parametersJsonSchema", () => {
-      const tools = [search, showDirections];
+      const tools = [search, showDirections, searchNearby];
 
       tools.forEach((tool) => {
         expect(tool.parametersJsonSchema).toBeDefined();
@@ -217,7 +229,7 @@ describe("Agent Tools", () => {
     });
 
     it("all tools should have action function", () => {
-      const tools = [search, showDirections];
+      const tools = [search, showDirections, searchNearby];
 
       tools.forEach((tool) => {
         expect(tool.action).toBeDefined();
@@ -250,6 +262,94 @@ describe("Agent Tools", () => {
       const result = await search.action({});
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe("SearchNearby Tool", () => {
+    it("should have correct name and description", () => {
+      expect(searchNearby.name).toBe("searchNearby");
+      expect(searchNearby.description).toBeDefined();
+      expect(searchNearby.description).toContain("near");
+    });
+
+    it("should have parametersJsonSchema", () => {
+      expect(searchNearby.parametersJsonSchema).toBeDefined();
+    });
+
+    it("should call map.search with auto-populated near from pinned location", async () => {
+      const mockResults = [{ poiId: "5", name: "Coffee Shop", score: 0.9 }];
+      mockMapInstance.search.mockResolvedValue(mockResults);
+
+      const result = await searchNearby.action({ term: "coffee" });
+
+      expect(mockMapInstance.search).toHaveBeenCalledWith({
+        term: "coffee",
+        floorId: "floor-1",
+        near: {
+          point: { lat: 40.7128, lng: -74.006 },
+          radius: 100,
+        },
+      });
+      expect(result).toEqual(mockResults);
+    });
+
+    it("should use custom radius when provided", async () => {
+      mockMapInstance.search.mockResolvedValue([]);
+
+      await searchNearby.action({ term: "food", radius: 250 });
+
+      expect(mockMapInstance.search).toHaveBeenCalledWith({
+        term: "food",
+        floorId: "floor-1",
+        near: {
+          point: { lat: 40.7128, lng: -74.006 },
+          radius: 250,
+        },
+      });
+    });
+
+    it("should default radius to 100 when not specified", async () => {
+      mockMapInstance.search.mockResolvedValue([]);
+
+      await searchNearby.action({});
+
+      expect(mockMapInstance.search).toHaveBeenCalledWith({
+        term: undefined,
+        floorId: "floor-1",
+        near: {
+          point: { lat: 40.7128, lng: -74.006 },
+          radius: 100,
+        },
+      });
+    });
+
+    it("should work without a search term", async () => {
+      const mockResults = [{ poiId: "10", name: "Gate A1", score: 1 }];
+      mockMapInstance.search.mockResolvedValue(mockResults);
+
+      const result = await searchNearby.action({});
+
+      expect(result).toEqual(mockResults);
+    });
+
+    it("should throw when pinned location is not configured", async () => {
+      const wayfinder = await import("@core/wayfinder");
+      vi.mocked(wayfinder.getPinnedLocation).mockReturnValueOnce(null);
+
+      await expect(searchNearby.action({ term: "test" })).rejects.toThrow(
+        "Pinned location is not configured",
+      );
+    });
+  });
+
+  describe("ShowDirections with null pinned location", () => {
+    it("should throw when pinned location is not configured", async () => {
+      const wayfinder = await import("@core/wayfinder");
+      vi.mocked(wayfinder.getPinnedLocation).mockReturnValueOnce(null);
+
+      await expect(
+        showDirections.action({ waypoints: [100] }),
+      ).rejects.toThrow("Pinned location is not configured");
     });
   });
 });
